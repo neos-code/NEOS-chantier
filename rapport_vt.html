@@ -1563,13 +1563,22 @@ function exportPDF() {
   }
 
   setTimeout(() => {
-    window.print();
-    // cleanup after print
-    setTimeout(() => {
+    let __cleaned = false;
+    const __cleanup = () => {
+      if (__cleaned) return;
+      __cleaned = true;
       document.querySelectorAll('.page').forEach(p => p.classList.remove('print-active'));
       document.getElementById(`page-${allPages[currentPage]}`)?.classList.add('active');
       __restorePrintFields(__printClones);
-    }, 1000);
+      window.removeEventListener('afterprint', __cleanup);
+    };
+    // 'afterprint' se déclenche quand la boîte de dialogue d'impression se ferme
+    // (après Enregistrer OU Annuler) — c'est le seul moment fiable pour nettoyer,
+    // surtout sur Android où la boîte reste ouverte plusieurs secondes.
+    window.addEventListener('afterprint', __cleanup);
+    window.print();
+    // filet de sécurité si 'afterprint' ne se déclenche pas (certains navigateurs mobiles)
+    setTimeout(__cleanup, 20000);
   }, 100);
 }
 

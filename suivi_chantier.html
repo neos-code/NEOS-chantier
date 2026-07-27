@@ -496,13 +496,19 @@ function exportPDF(){
     <p style="font-size:.82rem;color:#555;margin-bottom:14px">Projet : <strong>${proj}</strong></p>
     <hr style="border:none;border-top:2px solid #1a7a8a;margin-bottom:18px">`;
   setTimeout(()=>{
-    window.print();
-    setTimeout(()=>{
+    let __cleaned = false;
+    const __cleanup = () => {
+      if (__cleaned) return;
+      __cleaned = true;
       document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
       const active=document.querySelector('.tab-btn.active');
       if(active){const id=active.id.replace('tab-','');document.getElementById('page-'+id)?.classList.add('active');}
       __restorePrintFields(__printClones);
-    },1000);
+      window.removeEventListener('afterprint', __cleanup);
+    };
+    window.addEventListener('afterprint', __cleanup);
+    window.print();
+    setTimeout(__cleanup, 20000);
   },100);
 }
 
