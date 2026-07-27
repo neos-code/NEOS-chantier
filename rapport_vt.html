@@ -522,7 +522,8 @@ select.field-input option { background: var(--card); }
     resize: none !important;
   }
   input.print-hide-field { display: none !important; }
-  .print-text-value {
+  .print-text-value,
+  .__print-value {
     display: block !important;
     background: #fafafa !important;
     border: 1px solid #ccc !important;
@@ -534,6 +535,7 @@ select.field-input option { background: var(--card); }
     white-space: pre-wrap;
     word-break: break-word;
   }
+  .__print-hide { display: none !important; }
   .yesno label { border-color: #ccc !important; color: #555 !important; }
   .yesno label:has(input:checked) { background: #e8f0fe !important; border-color: #1a4a8a !important; color: #111 !important; }
 
@@ -545,7 +547,7 @@ select.field-input option { background: var(--card); }
 }
 
 /* hidden in screen */
-.print-header, .print-photos, .print-text-value { display: none; }
+.print-header, .print-photos, .print-text-value, .__print-value { display: none; }
 
 /* ═══════════════════════════════════════════
    TOAST
@@ -827,7 +829,6 @@ const SECTIONS = [
   { id:"projet", icon:"📍", title:"Projet", groups:[
     { title:"Caractéristiques", fields:[
       { id:"utilisation",   label:"Utilisation souhaitée",      type:"select", options:["Autoconsommation","Vente totale","Autoconso + revente surplus"] },
-      { id:"type_injection",label:"Type d'injection",           type:"text" },
       { id:"point_injection",label:"Point d'injection",         type:"text" },
       { id:"pdl_client",    label:"PDL client",                 type:"text" },
     ]},
@@ -851,8 +852,6 @@ const SECTIONS = [
     { title:"Conditions", fields:[
       { id:"vent",          label:"Exposition au vent",    type:"select", options:["Faible","Moyenne","Forte"] },
       { id:"gsm",           label:"Réseau GSM",            type:"yesno" },
-      { id:"vis_a_vis",     label:"Vis-à-vis",             type:"yesno" },
-      { id:"empierrement",  label:"Empierrement",          type:"yesno" },
     ]},
     { title:"Commentaire", fields:[
       { id:"commentaire_env", label:"Commentaire environnement", type:"memo" },
@@ -862,7 +861,6 @@ const SECTIONS = [
     { title:"Accès et logistique", fields:[
       { id:"stockage",      label:"Stockage sur site",         type:"yesno" },
       { id:"acces_toit",    label:"Accès au toit",             type:"select", options:["Facile","Difficile","Impossible"] },
-      { id:"ancrage",       label:"Point d'ancrage toiture",   type:"yesno" },
       { id:"dechargement",  label:"Moyen de déchargement",     type:"yesno" },
     ]},
     { title:"Moyens nécessaires", fields:[
@@ -899,8 +897,7 @@ const SECTIONS = [
     { title:"Couverture", fields:[
       { id:"type_couverture",label:"Type de couverture",  type:"select", options:["Bac acier","Tôle","Ardoise","Tuiles","Fibrociment","Toiture-terrasse","Autre"] },
       { id:"etat_couverture",label:"État de la couverture",type:"select", options:["Neuf","Très bon","Bon","Mauvais"] },
-      { id:"dim_sandwich",  label:"Dim. panneaux sandwich",type:"text" },
-      { id:"membrane",      label:"Membrane toiture-terrasse", type:"text" },
+      { id:"dim_sandwich",  label:"Dim couverture",type:"text" },
       { id:"comment_couverture", label:"Commentaire(s)",        type:"memo" },
     ]},
     { title:"Isolant", fields:[
@@ -927,7 +924,7 @@ const SECTIONS = [
       { id:"type_mur",       label:"Type de mur",            type:"select", options:["Béton","Placo BA13","Bois","Pierre","Autre"] },
       { id:"comment_onduleur",label:"Commentaire",           type:"text" },
     ]},
-    { title:"Conditions", fields:[
+    { title:"Conditions onduleur", fields:[
       { id:"zone_accessible",label:"Zone accessible",           type:"yesno" },
       { id:"local_frais",    label:"Local frais, sec, ventilé", type:"yesno" },
       { id:"clim",           label:"Clim à prévoir",            type:"yesno" },
@@ -965,15 +962,15 @@ const SECTIONS = [
     { title:"Schémas & Terre", fields:[
       { id:"schema_ac",      label:"Schéma AC réalisé",          type:"yesno" },
       { id:"schema_dc",      label:"Schéma DC réalisé",          type:"yesno" },
-      { id:"regard_terre",   label:"Regard de terre",            type:"yesno" },
+      { id:"regard_terre",   label:"Mise à la terre",            type:"yesno" },
       { id:"photos_regard",  label:"Photos regard prises",       type:"yesno" },
-      { id:"etat_regard",    label:"État du regard",             type:"select", options:["Fermé","Bon","Moyen","Mauvais"] },
+      { id:"etat_regard",    label:"Etat de la mise à la terre",  type:"text" },
     ]},
     { title:"Groupe électrogène", fields:[
       { id:"groupe_elec",    label:"Groupe électrogène",         type:"yesno" },
       { id:"batiments_groupe",label:"Bâtiments alimentés",       type:"text" },
     ]},
-    { title:"Actions électrique", fields:[
+    { title:"Actions", fields:[
       { id:"actions_elec",   label:"Actions à mener",            type:"memo" },
     ]},
   ]},
@@ -1476,36 +1473,57 @@ function loadPhotos() {
 /* ═══════════════════════════════════════════
    EXPORT PDF
 ═══════════════════════════════════════════ */
+/* ═══ CHAMPS "IMPRIMABLES" (fix mobile) ═══
+   Sur mobile, la valeur des <input>/<select>/<textarea> n'est pas toujours
+   peinte par le moteur d'impression du navigateur. On la remplace donc par
+   un <div> texte équivalent, uniquement pendant l'impression. */
+function __preparePrintFields(){
+  const clones=[];
+  const isInModal=el=>el.closest('.modal-overlay');
+  document.querySelectorAll('input[type="text"],input[type="date"],input[type="number"],input[type="tel"],input[type="email"],input:not([type])').forEach(inp=>{
+    if(isInModal(inp))return;
+    const div=document.createElement('div');
+    div.className='__print-value'+(inp.classList.contains('field-input')?' field-input':'');
+    div.textContent=(inp.value&&inp.value.trim())?inp.value:'\u2014';
+    inp.insertAdjacentElement('afterend',div);
+    inp.classList.add('__print-hide');
+    clones.push({el:inp,div});
+  });
+  document.querySelectorAll('select').forEach(sel=>{
+    if(isInModal(sel))return;
+    const div=document.createElement('div');
+    div.className='__print-value'+(sel.classList.contains('field-input')?' field-input':'');
+    const opt=sel.options[sel.selectedIndex];
+    div.textContent=opt?opt.textContent:'\u2014';
+    sel.insertAdjacentElement('afterend',div);
+    sel.classList.add('__print-hide');
+    clones.push({el:sel,div});
+  });
+  document.querySelectorAll('textarea').forEach(ta=>{
+    if(isInModal(ta))return;
+    const div=document.createElement('div');
+    div.className='__print-value __print-value-multiline'+(ta.classList.contains('field-input')?' field-input':'');
+    div.textContent=(ta.value&&ta.value.trim())?ta.value:'\u2014';
+    ta.insertAdjacentElement('afterend',div);
+    ta.classList.add('__print-hide');
+    clones.push({el:ta,div});
+  });
+  return clones;
+}
+function __restorePrintFields(clones){
+  clones.forEach(({el,div})=>{ el.classList.remove('__print-hide'); div.remove(); });
+}
+
 function exportPDF() {
   // Mark all pages as print-active for @media print
   document.querySelectorAll('.page').forEach(p => p.classList.remove('print-active'));
   document.querySelectorAll('.page').forEach(p => p.classList.add('print-active'));
 
-  // Adapter la hauteur des zones de texte (mémos) à leur contenu pour l'export.
-  // Les pages non actives sont display:none à l'écran (scrollHeight = 0), on les
-  // rend donc temporairement mesurables (visibility:hidden, toujours en layout)
-  // pour calculer une hauteur réelle avant d'imprimer.
-  document.body.classList.add('measuring-print');
-  const textareas = document.querySelectorAll('textarea.field-input');
-  textareas.forEach(t => {
-    t.dataset.origHeight = t.style.height || '';
-    t.style.height = 'auto';
-    t.style.height = t.scrollHeight + 'px';
-  });
-  document.body.classList.remove('measuring-print');
-
-  // Les <input> ne peuvent JAMAIS afficher plusieurs lignes, même avec du CSS :
-  // pour l'export, on remplace temporairement chaque champ texte par un bloc
-  // qui reprend sa valeur complète et peut retourner à la ligne.
-  const printTextClones = [];
-  document.querySelectorAll('input.field-input[type="text"]').forEach(inp => {
-    const div = document.createElement('div');
-    div.className = 'print-text-value';
-    div.textContent = inp.value || '\u2014';
-    inp.insertAdjacentElement('afterend', div);
-    inp.classList.add('print-hide-field');
-    printTextClones.push({ input: inp, div });
-  });
+  // Sur mobile, de nombreux navigateurs n'impriment pas le CONTENU des champs
+  // de formulaire (input/select/textarea) lors de l'export PDF — seul le texte
+  // "en dur" (titres, légendes) apparaît. On remplace donc temporairement TOUS
+  // les champs par du texte simple, uniquement le temps de l'impression.
+  const __printClones = __preparePrintFields();
 
   // Build print header
   let header = document.getElementById('print-header-el');
@@ -1550,13 +1568,7 @@ function exportPDF() {
     setTimeout(() => {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('print-active'));
       document.getElementById(`page-${allPages[currentPage]}`)?.classList.add('active');
-      // Restaurer la hauteur d'origine des zones de texte
-      textareas.forEach(t => { t.style.height = t.dataset.origHeight || ''; });
-      // Retirer les blocs texte temporaires et réafficher les champs d'origine
-      printTextClones.forEach(({ input, div }) => {
-        input.classList.remove('print-hide-field');
-        div.remove();
-      });
+      __restorePrintFields(__printClones);
     }, 1000);
   }, 100);
 }

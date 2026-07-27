@@ -198,6 +198,8 @@ select.field-input option{background:var(--card)}
   .section-card-header h3{color:#1a7a8a!important}
   .field-label{color:#555!important}
   .field-input,textarea.field-input{background:#fafafa!important;border:1px solid #ccc!important;color:#111!important}
+  .__print-hide{display:none!important}
+  .__print-value{display:block!important;background:#fafafa!important;border:1px solid #ccc!important;border-radius:7px;color:#111!important;font-family:'DM Mono',monospace;font-size:.82rem;padding:7px 11px;white-space:pre-wrap;word-break:break-word}
   .rapnum-display{background:#fafafa!important;border:1px solid #f0b429!important;color:#c07a00!important}
   .participant-card{background:#fafafa!important;border:1px solid #ccc!important}
   .participant-card textarea{color:#111!important}
@@ -212,7 +214,7 @@ select.field-input option{background:var(--card)}
   .pi-btn-add-action,.pi-btn-del{display:none!important}
   .pi-comment{background:#fafafa!important;border:1px solid #ccc!important;color:#111!important}
 }
-.print-header{display:none}
+.print-header,.__print-value{display:none}
 </style>
 </head>
 <body>
@@ -690,8 +692,50 @@ function restorePhotos(){
 }
 
 /* ═══ EXPORT PDF ═══ */
+/* ═══ CHAMPS "IMPRIMABLES" (fix mobile) ═══
+   Sur mobile, la valeur des <input>/<select>/<textarea> n'est pas toujours
+   peinte par le moteur d'impression du navigateur. On la remplace donc par
+   un <div> texte équivalent, uniquement pendant l'impression. */
+function __preparePrintFields(){
+  const clones=[];
+  const isInModal=el=>el.closest('.modal-overlay');
+  document.querySelectorAll('input[type="text"],input[type="date"],input[type="number"],input[type="tel"],input[type="email"],input:not([type])').forEach(inp=>{
+    if(isInModal(inp))return;
+    const div=document.createElement('div');
+    div.className='__print-value'+(inp.classList.contains('field-input')?' field-input':'');
+    div.textContent=(inp.value&&inp.value.trim())?inp.value:'\u2014';
+    inp.insertAdjacentElement('afterend',div);
+    inp.classList.add('__print-hide');
+    clones.push({el:inp,div});
+  });
+  document.querySelectorAll('select').forEach(sel=>{
+    if(isInModal(sel))return;
+    const div=document.createElement('div');
+    div.className='__print-value'+(sel.classList.contains('field-input')?' field-input':'');
+    const opt=sel.options[sel.selectedIndex];
+    div.textContent=opt?opt.textContent:'\u2014';
+    sel.insertAdjacentElement('afterend',div);
+    sel.classList.add('__print-hide');
+    clones.push({el:sel,div});
+  });
+  document.querySelectorAll('textarea').forEach(ta=>{
+    if(isInModal(ta))return;
+    const div=document.createElement('div');
+    div.className='__print-value __print-value-multiline'+(ta.classList.contains('field-input')?' field-input':'');
+    div.textContent=(ta.value&&ta.value.trim())?ta.value:'\u2014';
+    ta.insertAdjacentElement('afterend',div);
+    ta.classList.add('__print-hide');
+    clones.push({el:ta,div});
+  });
+  return clones;
+}
+function __restorePrintFields(clones){
+  clones.forEach(({el,div})=>{ el.classList.remove('__print-hide'); div.remove(); });
+}
+
 function exportPDF(){
   document.querySelectorAll('.page').forEach(p=>p.classList.add('active'));
+  const __printClones = __preparePrintFields();
   let header=document.getElementById('print-header-el');
   if(!header){header=document.createElement('div');header.id='print-header-el';header.className='print-header';document.body.appendChild(header);}
   const proj=g('projet_nom')||'—',tech=g('technicien')||'—',date=g('date')||new Date().toLocaleDateString('fr-FR');
@@ -705,6 +749,7 @@ function exportPDF(){
     setTimeout(()=>{
       document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
       document.getElementById('page-'+PAGES[currentPage].id)?.classList.add('active');
+      __restorePrintFields(__printClones);
     },1000);
   },100);
 }
