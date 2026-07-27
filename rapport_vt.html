@@ -1524,6 +1524,7 @@ function exportPDF() {
   // "en dur" (titres, légendes) apparaît. On remplace donc temporairement TOUS
   // les champs par du texte simple, uniquement le temps de l'impression.
   const __printClones = __preparePrintFields();
+  showToast(`🔧 Diagnostic : ${__printClones.length} champs préparés, ${document.querySelectorAll('.page.print-active').length} pages actives`, 6000);
 
   // Build print header
   let header = document.getElementById('print-header-el');
@@ -1562,24 +1563,27 @@ function exportPDF() {
     printPhotos.innerHTML = '';
   }
 
-  setTimeout(() => {
-    let __cleaned = false;
-    const __cleanup = () => {
-      if (__cleaned) return;
-      __cleaned = true;
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('print-active'));
-      document.getElementById(`page-${allPages[currentPage]}`)?.classList.add('active');
-      __restorePrintFields(__printClones);
-      window.removeEventListener('afterprint', __cleanup);
-    };
-    // 'afterprint' se déclenche quand la boîte de dialogue d'impression se ferme
-    // (après Enregistrer OU Annuler) — c'est le seul moment fiable pour nettoyer,
-    // surtout sur Android où la boîte reste ouverte plusieurs secondes.
-    window.addEventListener('afterprint', __cleanup);
-    window.print();
-    // filet de sécurité si 'afterprint' ne se déclenche pas (certains navigateurs mobiles)
-    setTimeout(__cleanup, 20000);
-  }, 100);
+  // Double requestAnimationFrame : garantit qu'au moins un rendu/peinture a eu
+  // lieu après le basculement de toutes les pages en visible, avant de lancer
+  // l'impression (sur mobile, un simple délai fixe n'est pas toujours suffisant).
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        let __cleaned = false;
+        const __cleanup = () => {
+          if (__cleaned) return;
+          __cleaned = true;
+          document.querySelectorAll('.page').forEach(p => p.classList.remove('print-active'));
+          document.getElementById(`page-${allPages[currentPage]}`)?.classList.add('active');
+          __restorePrintFields(__printClones);
+          window.removeEventListener('afterprint', __cleanup);
+        };
+        window.addEventListener('afterprint', __cleanup);
+        window.print();
+        setTimeout(__cleanup, 20000);
+      }, 350);
+    });
+  });
 }
 
 /* ═══════════════════════════════════════════

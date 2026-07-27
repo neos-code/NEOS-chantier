@@ -487,6 +487,7 @@ function __restorePrintFields(clones){
 function exportPDF(){
   document.querySelectorAll('.tab-page').forEach(p=>p.classList.add('active'));
   const __printClones = __preparePrintFields();
+  showToast(`🔧 Diagnostic : ${__printClones.length} champs préparés, ${document.querySelectorAll('.tab-page.active').length} pages actives`, 6000);
   let header=document.getElementById('print-header-el');
   if(!header){header=document.createElement('div');header.id='print-header-el';header.className='print-header';document.body.appendChild(header);}
   const proj=g('projet')||'—',tech=g('technicien')||'—',date=g('date')||'—';
@@ -495,21 +496,25 @@ function exportPDF(){
     <p style="font-size:.82rem;color:#555;margin-bottom:4px">N° : <strong>${buildRapNum()}</strong> &nbsp;|&nbsp; Technicien : <strong>${tech}</strong> &nbsp;|&nbsp; Date : <strong>${date}</strong></p>
     <p style="font-size:.82rem;color:#555;margin-bottom:14px">Projet : <strong>${proj}</strong></p>
     <hr style="border:none;border-top:2px solid #1a7a8a;margin-bottom:18px">`;
-  setTimeout(()=>{
-    let __cleaned = false;
-    const __cleanup = () => {
-      if (__cleaned) return;
-      __cleaned = true;
-      document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
-      const active=document.querySelector('.tab-btn.active');
-      if(active){const id=active.id.replace('tab-','');document.getElementById('page-'+id)?.classList.add('active');}
-      __restorePrintFields(__printClones);
-      window.removeEventListener('afterprint', __cleanup);
-    };
-    window.addEventListener('afterprint', __cleanup);
-    window.print();
-    setTimeout(__cleanup, 20000);
-  },100);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        let __cleaned = false;
+        const __cleanup = () => {
+          if (__cleaned) return;
+          __cleaned = true;
+          document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
+          const active=document.querySelector('.tab-btn.active');
+          if(active){const id=active.id.replace('tab-','');document.getElementById('page-'+id)?.classList.add('active');}
+          __restorePrintFields(__printClones);
+          window.removeEventListener('afterprint', __cleanup);
+        };
+        window.addEventListener('afterprint', __cleanup);
+        window.print();
+        setTimeout(__cleanup, 20000);
+      }, 350);
+    });
+  });
 }
 
 /* ═══ RESET ═══ */
