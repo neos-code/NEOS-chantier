@@ -29,6 +29,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .nav-icon{font-size:1rem;width:20px;text-align:center}
 .sidebar-footer{padding:14px 10px;border-top:1px solid var(--border)}
 .btn-export{width:100%;padding:11px;background:var(--accent);color:#000;border:none;border-radius:var(--radius);font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:opacity .15s,transform .1s}
+.btn-back{width:100%;padding:10px;background:transparent;border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-bottom:8px;transition:all .15s}
+.btn-back:hover{border-color:var(--accent2);color:var(--accent2)}
 .btn-export:hover{opacity:.88;transform:translateY(-1px)}
 .btn-reset{width:100%;margin-top:8px;padding:9px;background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:var(--radius);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s}
 .btn-reset:hover{background:rgba(248,113,113,.1)}
@@ -144,6 +146,8 @@ select.field-input option{background:var(--card)}
   .nav-btn{padding:10px 0;justify-content:center}
   .nav-btn span:not(.nav-icon){display:none}
   .sidebar-footer{padding:8px 6px}
+  .btn-back{font-size:0;padding:10px;margin-bottom:6px}
+  .btn-back::before{content:"←";font-size:1.1rem}
   .btn-export{font-size:0;padding:10px}
   .btn-export::before{content:"⬇";font-size:1.1rem}
   .btn-reset{font-size:0;margin-top:4px;padding:8px}
@@ -154,22 +158,25 @@ select.field-input option{background:var(--card)}
   .participants-grid{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:600px){
-  .app{flex-direction:column}
-  .sidebar{width:100%;min-width:0;height:auto;border-right:none;border-top:1px solid var(--border);order:2;flex-direction:row;overflow-x:auto}
+  html, body { height: 100%; }
+  .app{flex-direction:column;height:auto;min-height:100vh;overflow:visible}
+  .sidebar{position:fixed;left:0;right:0;bottom:0;width:100%;min-width:0;height:auto;z-index:200;border-right:none;border-top:1px solid var(--border);flex-direction:row;overflow-x:auto;overflow-y:hidden;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -4px 16px rgba(0,0,0,.3)}
   .sidebar-logo{display:none}
   .nav{display:flex;flex-direction:row;padding:4px;flex:1;overflow-x:auto}
   .nav::-webkit-scrollbar{display:none}
   .nav-btn{flex-direction:column;gap:2px;padding:6px 10px;min-width:56px;border-radius:8px;white-space:nowrap}
   .nav-btn>span:not(.nav-icon){display:block;font-size:.6rem}
   .nav-icon{font-size:1.1rem}
-  .sidebar-footer{padding:4px 8px;border-top:none;border-left:1px solid var(--border);display:flex;align-items:center;flex-direction:column;gap:4px}
-  .btn-export,.btn-reset{margin:0;padding:8px 12px;font-size:.75rem;width:auto}
+  .sidebar-footer{padding:4px 6px;border-top:none;border-left:1px solid var(--border);display:flex;align-items:center;gap:4px}
+  .btn-back{width:auto;margin-bottom:0;padding:8px;font-size:0}
+  .btn-back::before{content:"←";font-size:1.1rem}
+  .btn-export,.btn-reset{width:auto;margin:0;padding:8px 12px;font-size:.75rem}
   .btn-export::before,.btn-reset::before{content:none}
-  .main{order:1;overflow:hidden;flex:1;min-height:0}
-  .topbar{height:48px;padding:0 14px}
+  .main{order:1;overflow:visible;flex:none;min-height:0}
+  .topbar{height:48px;padding:0 14px;position:sticky;top:0;z-index:100}
   .topbar-title{font-size:.95rem}
   .progress-bar{width:100px}
-  .content{padding:12px}
+  .content{padding:12px;padding-bottom:calc(76px + env(safe-area-inset-bottom,0px));overflow-y:visible}
   .field-row{grid-template-columns:1fr;gap:4px;padding:10px 0}
   .field-label{padding-top:0}
   .participants-grid{grid-template-columns:1fr 1fr}
@@ -217,7 +224,7 @@ select.field-input option{background:var(--card)}
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="sidebar-footer">
-      <button class="btn-export" onclick="goBackToProject()" style="background:transparent;border:1px solid var(--border);color:var(--text);margin-bottom:8px">← Retour au projet</button>
+      <button class="btn-back" onclick="goBackToProject()">← Retour au projet</button>
       <button class="btn-export" onclick="exportPDF()">⬇ Exporter PDF</button>
       <button class="btn-reset" onclick="confirmReset()">🗑 Vider ce rapport</button>
     </div>

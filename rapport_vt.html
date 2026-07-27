@@ -117,6 +117,21 @@ body {
 }
 .btn-export:hover { opacity: .88; transform: translateY(-1px); }
 .btn-export:active { transform: translateY(0); }
+.btn-back {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius);
+  font-family: 'Syne', sans-serif;
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: all .15s;
+}
+.btn-back:hover { border-color: var(--accent2); color: var(--accent2); }
 
 /* main */
 .main {
@@ -365,6 +380,8 @@ select.field-input option { background: var(--card); }
   .nav-icon { width: auto; font-size: 1.2rem; }
   .nav-badge { position: absolute; top: 4px; right: 4px; font-size: .55rem; padding: 1px 4px; }
   .sidebar-footer { padding: 8px 6px; }
+  .btn-back { font-size: 0; padding: 10px; margin-bottom: 6px; border-radius: 8px; }
+  .btn-back::before { content: "←"; font-size: 1.1rem; }
   .btn-export { font-size: 0; padding: 10px; border-radius: 8px; }
   .btn-export::before { content: "⬇"; font-size: 1.1rem; }
   .topbar { padding: 0 16px; }
@@ -372,21 +389,26 @@ select.field-input option { background: var(--card); }
   .field-row { grid-template-columns: 160px 1fr; }
 }
 
-/* Mobile (≤ 600px) : sidebar devient barre de navigation en bas */
+/* Mobile (≤ 600px) : sidebar devient barre de navigation FIXE en bas d'écran */
 @media (max-width: 600px) {
-  .app { flex-direction: column; }
+  html, body { height: 100%; }
+  .app { flex-direction: column; height: auto; min-height: 100vh; overflow: visible; }
 
-  /* sidebar devient bottom nav */
+  /* la nav passe en barre fixe tout en bas, indépendante de la hauteur d'écran */
   .sidebar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
     width: 100%;
     min-width: 0;
     height: auto;
+    z-index: 200;
     border-right: none;
     border-top: 1px solid var(--border);
-    order: 2;
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    box-shadow: 0 -4px 16px rgba(0,0,0,.3);
   }
   .sidebar-logo { display: none; }
   .nav {
@@ -414,25 +436,33 @@ select.field-input option { background: var(--card); }
   .nav-icon { font-size: 1.1rem; }
   .nav-badge { position: absolute; top: 2px; right: 2px; font-size: .5rem; padding: 1px 3px; }
   .sidebar-footer {
-    padding: 4px 8px;
+    padding: 4px 6px;
     border-top: none;
     border-left: 1px solid var(--border);
     display: flex;
     align-items: center;
+    gap: 4px;
   }
+  .btn-back { width: auto; margin-bottom: 0; padding: 8px; font-size: 0; }
+  .btn-back::before { content: "←"; font-size: 1.1rem; }
   .btn-export {
+    width: auto;
     white-space: nowrap;
     padding: 8px 12px;
     font-size: .75rem;
   }
   .btn-export::before { content: none; }
 
-  /* main au dessus */
-  .main { order: 1; overflow: hidden; flex: 1; min-height: 0; }
-  .topbar { height: 48px; padding: 0 14px; }
+  /* main au dessus, avec marge pour ne pas passer sous la barre fixe */
+  .main { order: 1; overflow: visible; flex: none; min-height: 0; }
+  .topbar { height: 48px; padding: 0 14px; position: sticky; top: 0; z-index: 100; }
   .topbar-title { font-size: .95rem; }
   .progress-bar { width: 100px; }
-  .content { padding: 12px; }
+  .content {
+    padding: 12px;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    overflow-y: visible;
+  }
 
   /* champs en colonne */
   .field-row {
@@ -700,7 +730,7 @@ select.field-input option { background: var(--card); }
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="sidebar-footer">
-      <button class="btn-export" onclick="goBackToProject()" style="background:transparent;border:1px solid var(--border);color:var(--text);margin-bottom:8px">← Retour au projet</button>
+      <button class="btn-back" onclick="goBackToProject()">← Retour au projet</button>
       <button class="btn-export" onclick="exportPDF()">⬇ Exporter PDF</button>
       <button class="btn-reset" onclick="confirmReset()">🗑 Vider ce rapport</button>
     </div>
