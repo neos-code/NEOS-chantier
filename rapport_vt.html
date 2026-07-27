@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1117">
+<title>Rapport Visite Technique</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   VARIABLES & RESET
+═══════════════════════════════════════════ */
+:root {
+  --bg:        #0f1117;
+  --panel:     #181c28;
+  --card:      #1e2335;
+  --border:    #2a3050;
+  --accent:    #f0b429;
+  --accent2:   #38bdf8;
+  --ok:        #34d399;
+  --danger:    #f87171;
+  --text:      #e2e8f0;
+  --muted:     #64748b;
+  --radius:    10px;
+  --shadow:    0 4px 24px rgba(0,0,0,.4);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════ */
+.app { display: flex; flex: 1; overflow: hidden; height: 100vh; }
+
+/* sidebar */
+.sidebar {
+  width: 230px;
+  min-width: 230px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.sidebar-logo {
+  padding: 28px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -.5px;
+}
+.sidebar-logo p { font-size: .72rem; color: var(--muted); margin-top: 3px; }
+
+.nav { padding: 12px 10px; flex: 1; }
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: .82rem;
+  font-weight: 500;
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+  transition: all .15s;
+  position: relative;
+}
+.nav-btn:hover { background: var(--card); color: var(--text); }
+.nav-btn.active { background: var(--card); color: var(--accent); }
+.nav-btn .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--ok);
+  color: #000;
+  font-size: .65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  display: none;
+}
+.nav-badge.show { display: block; }
+
+.sidebar-footer {
+  padding: 14px 10px;
+  border-top: 1px solid var(--border);
+}
+.btn-export {
+  width: 100%;
+  padding: 11px;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: var(--radius);
+  font-family: 'Syne', sans-serif;
+  font-size: .85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.btn-export:hover { opacity: .88; transform: translateY(-1px); }
+.btn-export:active { transform: translateY(0); }
+
+/* main */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.topbar {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.topbar-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.progress-wrap { display: flex; align-items: center; gap: 10px; }
+.progress-bar {
+  width: 180px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 99px;
+  transition: width .4s ease;
+  width: 0%;
+}
+.progress-label { font-size: .75rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px;
+}
+
+/* ═══════════════════════════════════════════
+   PAGES
+═══════════════════════════════════════════ */
+.page { display: none; }
+.page.active { display: block; }
+/* Utilisé brièvement avant l'impression pour rendre toutes les pages
+   mesurables (layout réel) sans les rendre visibles à l'écran */
+body.measuring-print .page { display: block !important; visibility: hidden !important; }
+
+/* ═══════════════════════════════════════════
+   FORM CARDS
+═══════════════════════════════════════════ */
+.section-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.section-card-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-card-header h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--accent2);
+}
+.section-card-body { padding: 18px 20px; }
+
+.field-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  align-items: start;
+  gap: 10px 16px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.field-row:last-child { border-bottom: none; }
+.field-label {
+  font-size: .82rem;
+  color: var(--muted);
+  padding-top: 8px;
+  font-weight: 500;
+}
+.field-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: .82rem;
+  padding: 7px 11px;
+  outline: none;
+  transition: border-color .15s;
+}
+.field-input:focus { border-color: var(--accent); }
+textarea.field-input { resize: vertical; min-height: 68px; }
+select.field-input { cursor: pointer; }
+select.field-input option { background: var(--card); }
+
+/* yesno */
+.yesno { display: flex; gap: 8px; padding-top: 2px; }
+.yesno label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: .82rem;
+  color: var(--muted);
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: all .12s;
+  user-select: none;
+}
+.yesno input[type=radio] { display: none; }
+.yesno input[type=radio]:checked + span { color: var(--text); }
+.yesno label:has(input:checked) { border-color: var(--accent); color: var(--text); background: rgba(240,180,41,.08); }
+
+/* ═══════════════════════════════════════════
+   PHOTOS PAGE
+═══════════════════════════════════════════ */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.photo-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.photo-card.has-photo { border-color: var(--ok); }
+.photo-card-header {
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.photo-num {
+  font-family: 'DM Mono', monospace;
+  font-size: .7rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: rgba(240,180,41,.1);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.photo-label { font-size: .82rem; font-weight: 500; flex: 1; }
+.photo-status { font-size: .7rem; color: var(--muted); }
+.photo-status.done { color: var(--ok); }
+
+.photo-preview {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: none;
+  background: var(--bg);
+}
+.photo-preview.visible { display: block; }
+.photo-placeholder {
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: .78rem;
+  gap: 6px;
+}
+.photo-placeholder .ph-icon { font-size: 2rem; opacity: .3; }
+.photo-placeholder.hidden { display: none; }
+
+.photo-actions { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.btn-photo {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: .8rem;
+  cursor: pointer;
+  transition: all .12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn-photo:hover { border-color: var(--accent); color: var(--accent); }
+.btn-photo.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+.btn-photo.primary:hover { opacity: .85; }
+.btn-photo.danger { border-color: var(--danger); color: var(--danger); }
+.btn-photo.danger:hover { background: rgba(248,113,113,.1); }
+.photo-actions-row { display: flex; gap: 8px; }
+.photo-actions-row .btn-photo { flex: 1; }
+.photo-comment {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: .78rem;
+  padding: 6px 10px;
+  resize: none;
+  outline: none;
+  height: 52px;
+}
+.photo-comment:focus { border-color: var(--accent2); }
+.photo-file-input { display: none; }
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE — TABLETTE & MOBILE
+═══════════════════════════════════════════ */
+
+/* Tablette (≤ 900px) : sidebar rétractée en barre d'icônes */
+@media (max-width: 900px) {
+  .sidebar {
+    width: 56px;
+    min-width: 56px;
+    overflow: visible;
+  }
+  .sidebar-logo { padding: 14px 8px; text-align: center; }
+  .sidebar-logo h1 { font-size: .7rem; letter-spacing: 0; }
+  .sidebar-logo p { display: none; }
+  .nav { padding: 8px 6px; }
+  .nav-btn { padding: 10px 0; justify-content: center; border-radius: 8px; }
+  .nav-btn span:not(.nav-icon):not(.nav-badge) { display: none; }
+  .nav-icon { width: auto; font-size: 1.2rem; }
+  .nav-badge { position: absolute; top: 4px; right: 4px; font-size: .55rem; padding: 1px 4px; }
+  .sidebar-footer { padding: 8px 6px; }
+  .btn-export { font-size: 0; padding: 10px; border-radius: 8px; }
+  .btn-export::before { content: "⬇"; font-size: 1.1rem; }
+  .topbar { padding: 0 16px; }
+  .content { padding: 16px; }
+  .field-row { grid-template-columns: 160px 1fr; }
+}
+
+/* Mobile (≤ 600px) : sidebar devient barre de navigation en bas */
+@media (max-width: 600px) {
+  .app { flex-direction: column; }
+
+  /* sidebar devient bottom nav */
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    order: 2;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .sidebar-logo { display: none; }
+  .nav {
+    display: flex;
+    flex-direction: row;
+    padding: 4px;
+    flex: 1;
+    overflow-x: auto;
+    gap: 2px;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+    min-width: 56px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+  .nav-btn > span:not(.nav-icon):not(.nav-badge) {
+    display: block;
+    font-size: .6rem;
+    line-height: 1.2;
+  }
+  .nav-icon { font-size: 1.1rem; }
+  .nav-badge { position: absolute; top: 2px; right: 2px; font-size: .5rem; padding: 1px 3px; }
+  .sidebar-footer {
+    padding: 4px 8px;
+    border-top: none;
+    border-left: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+  }
+  .btn-export {
+    white-space: nowrap;
+    padding: 8px 12px;
+    font-size: .75rem;
+  }
+  .btn-export::before { content: none; }
+
+  /* main au dessus */
+  .main { order: 1; overflow: hidden; flex: 1; min-height: 0; }
+  .topbar { height: 48px; padding: 0 14px; }
+  .topbar-title { font-size: .95rem; }
+  .progress-bar { width: 100px; }
+  .content { padding: 12px; }
+
+  /* champs en colonne */
+  .field-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 10px 0;
+  }
+  .field-label { padding-top: 0; font-size: .8rem; }
+  .field-input { font-size: .9rem; padding: 9px 12px; }
+  select.field-input { font-size: .9rem; }
+  .yesno label { padding: 8px 16px; font-size: .85rem; }
+
+  /* cards */
+  .section-card { border-radius: 10px; margin-bottom: 14px; }
+  .section-card-header { padding: 12px 14px; }
+  .section-card-body { padding: 12px 14px; }
+
+  /* photos */
+  .photo-grid { grid-template-columns: 1fr; gap: 12px; }
+  .photo-preview { height: 200px; }
+  .btn-photo { padding: 12px; font-size: .9rem; }
+}
+
+/* ═══════════════════════════════════════════
+   PRINT / PDF
+═══════════════════════════════════════════ */
+@media print {
+  @page { margin: 15mm 15mm; size: A4; }
+
+  body { background: #fff !important; color: #111 !important; font-family: 'DM Sans', Arial, sans-serif; }
+  .app { display: block !important; height: auto !important; }
+  .sidebar, .topbar, .progress-wrap, .btn-export,
+  .btn-photo, .photo-actions, .photo-file-input,
+  .photo-placeholder, .nav, .sidebar-footer { display: none !important; }
+  .main { overflow: visible !important; }
+  .content { overflow: visible !important; padding: 0 !important; }
+  .page { display: block !important; }
+  .page:not(.print-active) { display: none !important; }
+
+  .print-header { display: block !important; }
+  .section-card {
+    background: #fff !important;
+    border: 1px solid #ddd !important;
+    margin-bottom: 12px;
+    page-break-inside: avoid;
+  }
+  .section-card-header { background: #f5f5f5 !important; border-bottom: 1px solid #ddd !important; }
+  .section-card-header h3 { color: #1a4a8a !important; }
+  .field-label { color: #555 !important; }
+  .field-input, select.field-input, textarea.field-input {
+    background: #fafafa !important;
+    border: 1px solid #ccc !important;
+    color: #111 !important;
+  }
+  textarea.field-input {
+    overflow: visible !important;
+    resize: none !important;
+  }
+  input.print-hide-field { display: none !important; }
+  .print-text-value {
+    display: block !important;
+    background: #fafafa !important;
+    border: 1px solid #ccc !important;
+    border-radius: 7px;
+    color: #111 !important;
+    font-family: 'DM Mono', monospace;
+    font-size: .82rem;
+    padding: 7px 11px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .yesno label { border-color: #ccc !important; color: #555 !important; }
+  .yesno label:has(input:checked) { background: #e8f0fe !important; border-color: #1a4a8a !important; color: #111 !important; }
+
+  /* print photos */
+  .print-photos { display: block !important; }
+  .print-photo-item { page-break-inside: avoid; margin-bottom: 16px; }
+  .print-photo-item img { max-width: 100%; max-height: 200px; object-fit: contain; border: 1px solid #ddd; border-radius: 6px; }
+  .print-photo-caption { font-size: .8rem; color: #444; margin-top: 4px; }
+}
+
+/* hidden in screen */
+.print-header, .print-photos, .print-text-value { display: none; }
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--card);
+  border: 1px solid var(--ok);
+  color: var(--ok);
+  padding: 12px 20px;
+  border-radius: 9px;
+  font-size: .85rem;
+  font-weight: 500;
+  box-shadow: var(--shadow);
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: all .25s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.btn-reset {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  font-family: 'Syne', sans-serif;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-reset:hover { background: rgba(248,113,113,.1); }
+
+/* modal reset */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px 28px;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.modal-box h2 { font-family: 'Syne', sans-serif; font-size: 1.1rem; color: var(--text); margin-bottom: 10px; }
+.modal-box p { font-size: .85rem; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+.modal-actions { display: flex; gap: 10px; justify-content: center; }
+.modal-btn {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Syne', sans-serif;
+  font-size: .85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.modal-btn:hover { opacity: .85; }
+.modal-btn.cancel { background: var(--border); color: var(--text); }
+.modal-btn.confirm { background: var(--danger); color: #fff; }
+
+/* modal camera */
+.camera-box { max-width: 480px; }
+.camera-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+.camera-viewport video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.camera-viewport img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+.camera-viewport img.visible { display: block; }
+
+/* modal annotation */
+.annotate-box { max-width: 600px; }
+.annotate-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.color-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+}
+.color-dot.active { border-color: var(--text); box-shadow: 0 0 0 2px var(--accent); }
+.annotate-toolbar .btn-clear {
+  margin-left: auto;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: .78rem;
+  cursor: pointer;
+}
+.annotate-toolbar .btn-clear:hover { border-color: var(--danger); color: var(--danger); }
+.annotate-canvas-wrap {
+  width: 100%;
+  max-height: 55vh;
+  overflow: auto;
+  background: #000;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#annotate-canvas { touch-action: none; max-width: 100%; max-height: 55vh; display: block; cursor: crosshair; }
+
+/* rapport num display */
+.rapnum-display {
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  color: var(--accent);
+  font-family: 'DM Mono', monospace;
+  font-size: .88rem;
+  font-weight: 500;
+  padding: 7px 11px;
+  letter-spacing: .5px;
+  user-select: all;
+}
+
+@media (max-width: 600px) {
+  .btn-reset { font-size: 0; margin-top: 4px; padding: 8px; }
+  .btn-reset::before { content: "🗑"; font-size: .9rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>⚡ VT Rapport</h1>
+      <p id="doc-context-label">Visite Technique</p>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sidebar-footer">
+      <button class="btn-export" onclick="goBackToProject()" style="background:transparent;border:1px solid var(--border);color:var(--text);margin-bottom:8px">← Retour au projet</button>
+      <button class="btn-export" onclick="exportPDF()">⬇ Exporter PDF</button>
+      <button class="btn-reset" onclick="confirmReset()">🗑 Vider ce rapport</button>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title" id="topbar-title">En-tête</span>
+      <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <span class="progress-label" id="progress-label">0%</span>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<!-- MODAL RESET -->
+<div class="modal-overlay" id="modal-reset">
+  <div class="modal-box">
+    <h2>🗑 Nouveau rapport ?</h2>
+    <p>Toutes les données du formulaire actuel seront effacées.<br>Le compteur de rapport sera incrémenté.</p>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal()">Annuler</button>
+      <button class="modal-btn confirm" onclick="doReset()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CAMERA -->
+<div class="modal-overlay" id="modal-camera">
+  <div class="modal-box camera-box">
+    <h2>📷 Prendre une photo</h2>
+    <div class="camera-viewport">
+      <video id="camera-video" autoplay playsinline muted></video>
+      <img id="camera-preview" alt="">
+    </div>
+    <canvas id="camera-canvas" style="display:none"></canvas>
+    <div class="modal-actions" id="camera-actions-live">
+      <button class="modal-btn cancel" onclick="closeCamera()">Annuler</button>
+      <button class="modal-btn confirm" onclick="captureCameraPhoto()">📸 Capturer</button>
+    </div>
+    <div class="modal-actions" id="camera-actions-preview" style="display:none">
+      <button class="modal-btn cancel" onclick="retakeCameraPhoto()">↺ Reprendre</button>
+      <button class="modal-btn confirm" onclick="confirmCameraPhoto()">✔ Utiliser</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ANNOTATION -->
+<div class="modal-overlay" id="modal-annotate">
+  <div class="modal-box annotate-box">
+    <h2>✏️ Annoter la photo</h2>
+    <div class="annotate-toolbar">
+      <button class="color-dot" data-color="#f87171" style="background:#f87171" onclick="setDrawColor('#f87171')" title="Rouge"></button>
+      <button class="color-dot" data-color="#f0b429" style="background:#f0b429" onclick="setDrawColor('#f0b429')" title="Jaune"></button>
+      <button class="color-dot" data-color="#38bdf8" style="background:#38bdf8" onclick="setDrawColor('#38bdf8')" title="Bleu"></button>
+      <button class="color-dot" data-color="#34d399" style="background:#34d399" onclick="setDrawColor('#34d399')" title="Vert"></button>
+      <button class="color-dot" data-color="#ffffff" style="background:#ffffff" onclick="setDrawColor('#ffffff')" title="Blanc"></button>
+      <button class="btn-clear" onclick="clearAnnotations()">↺ Effacer le dessin</button>
+    </div>
+    <div class="annotate-canvas-wrap">
+      <canvas id="annotate-canvas"></canvas>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeAnnotate()">Annuler</button>
+      <button class="modal-btn confirm" onclick="saveAnnotation()">✔ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   DONNÉES DU FORMULAIRE
+═══════════════════════════════════════════ */
+const SECTIONS = [
+  { id:"entete", icon:"📋", title:"En-tête", groups:[
+    { title:"Informations générales", fields:[
+      { id:"rapport_num",   label:"N° de rapport (auto)", type:"rapnum" },
+      { id:"technicien",    label:"Technicien",        type:"text" },
+      { id:"date",          label:"Date",              type:"text", default: new Date().toLocaleDateString('fr-FR') },
+    ]},
+    { title:"Identification du projet", fields:[
+      { id:"dept",          label:"N° département (2 chiffres)", type:"text_dept" },
+      { id:"projet_nom",    label:"Nom du projet",               type:"text_rapnum" },
+      { id:"localisation",  label:"Localisation / GPS",          type:"text" },
+      { id:"client_nom",    label:"Nom du client",               type:"text" },
+    ]},
+  ]},
+  { id:"projet", icon:"📍", title:"Projet", groups:[
+    { title:"Caractéristiques", fields:[
+      { id:"utilisation",   label:"Utilisation souhaitée",      type:"select", options:["Autoconsommation","Vente totale","Autoconso + revente surplus"] },
+      { id:"type_injection",label:"Type d'injection",           type:"text" },
+      { id:"point_injection",label:"Point d'injection",         type:"text" },
+      { id:"pdl_client",    label:"PDL client",                 type:"text" },
+    ]},
+    { title:"Installation & Dimensionnement", fields:[
+      { id:"type_projet",   label:"Type de projet",             type:"select", options:["Toiture","Ombrière","Sol","Autre"] },
+      { id:"calepinage",    label:"Calepinage",                 type:"select", options:["Portrait","Paysage","Mixte"] },
+      { id:"puissance",     label:"Puissance envisagée (kWc)",  type:"text" },
+      { id:"erp",           label:"ERP",                        type:"yesno" },
+      { id:"date_realisation",label:"Date réalisation souhaitée", type:"text" },
+    ]},
+    { title:"Commentaire", fields:[
+      { id:"commentaire_projet", label:"Commentaire projet", type:"memo" },
+    ]},
+  ]},
+  { id:"environnement", icon:"🌿", title:"Environnement", groups:[
+    { title:"Contraintes", fields:[
+      { id:"ombre_portee",  label:"Ombre portée",          type:"yesno" },
+      { id:"obstacles",     label:"Présence d'obstacles",  type:"yesno" },
+      { id:"detail_obstacles",label:"Détails obstacles",   type:"text" },
+    ]},
+    { title:"Conditions", fields:[
+      { id:"vent",          label:"Exposition au vent",    type:"select", options:["Faible","Moyenne","Forte"] },
+      { id:"gsm",           label:"Réseau GSM",            type:"yesno" },
+      { id:"vis_a_vis",     label:"Vis-à-vis",             type:"yesno" },
+      { id:"empierrement",  label:"Empierrement",          type:"yesno" },
+    ]},
+    { title:"Commentaire", fields:[
+      { id:"commentaire_env", label:"Commentaire environnement", type:"memo" },
+    ]},
+  ]},
+  { id:"accessibilite", icon:"🚜", title:"Accessibilité", groups:[
+    { title:"Accès et logistique", fields:[
+      { id:"stockage",      label:"Stockage sur site",         type:"yesno" },
+      { id:"acces_toit",    label:"Accès au toit",             type:"select", options:["Facile","Difficile","Impossible"] },
+      { id:"ancrage",       label:"Point d'ancrage toiture",   type:"yesno" },
+      { id:"dechargement",  label:"Moyen de déchargement",     type:"yesno" },
+    ]},
+    { title:"Moyens nécessaires", fields:[
+      { id:"materiel_spec", label:"Matériel spécifique",       type:"text" },
+      { id:"poids_lourd",   label:"Accès poids lourd",         type:"yesno" },
+      { id:"dechets",       label:"Traitement des déchets",    type:"text" },
+    ]},
+    { title:"Commentaire", fields:[
+      { id:"commentaire_acc", label:"Commentaire accessibilité", type:"memo" },
+    ]},
+  ]},
+  { id:"ouvrage", icon:"🏗️", title:"Ouvrage", groups:[
+    { title:"Informations générales", fields:[
+      { id:"annee_construction",label:"Année de construction",    type:"text" },
+      { id:"plan_dispo",        label:"Plan bâtiment disponible", type:"yesno" },
+      { id:"comment_infogen",   label:"Commentaire(s)",           type:"memo" },
+    ]},
+    { title:"Dimensions bâtiment / toiture", fields:[
+      { id:"longueur",      label:"Longueur bâtiment (m)",  type:"text" },
+      { id:"largeur",       label:"Largeur bâtiment (m)",   type:"text" },
+      { id:"inclinaison",   label:"Inclinaison (°)",        type:"text" },
+      { id:"orientation",   label:"Orientation (°)",        type:"text" },
+      { id:"hauteur_faitage",label:"Hauteur faîtage (m)",   type:"text" },
+      { id:"rampant",       label:"Dimension rampant (m)",  type:"text" },
+      { id:"bas_pente",     label:"Hauteur bas de pente (m)",type:"text" },
+      { id:"comble",        label:"Comble aménagé",         type:"yesno" },
+      { id:"comment_dimensions", label:"Commentaire(s)",        type:"memo" },
+    ]},
+    { title:"Charpente", fields:[
+      { id:"type_charpente",label:"Type de charpente",  type:"select", options:["Bois","Métal","Béton","Bois-métal"] },
+      { id:"etat_charpente",label:"État de la charpente",type:"select", options:["Neuf","Très bon","Bon","Mauvais"] },
+      { id:"comment_charpente",label:"Commentaire",     type:"text" },
+    ]},
+    { title:"Couverture", fields:[
+      { id:"type_couverture",label:"Type de couverture",  type:"select", options:["Bac acier","Tôle","Ardoise","Tuiles","Fibrociment","Toiture-terrasse","Autre"] },
+      { id:"etat_couverture",label:"État de la couverture",type:"select", options:["Neuf","Très bon","Bon","Mauvais"] },
+      { id:"dim_sandwich",  label:"Dim. panneaux sandwich",type:"text" },
+      { id:"membrane",      label:"Membrane toiture-terrasse", type:"text" },
+      { id:"comment_couverture", label:"Commentaire(s)",        type:"memo" },
+    ]},
+    { title:"Isolant", fields:[
+      { id:"type_isolant",  label:"Type d'isolant",  type:"select", options:["Laine de verre","Laine de roche","Panneau","Polystyrène","Aucun"] },
+      { id:"etat_isolant",  label:"État de l'isolant",type:"select", options:["Neuf","Très bon","Bon","Mauvais"] },
+      { id:"comment_isolant", label:"Commentaire(s)",  type:"memo" },
+    ]},
+    { title:"Obstacles", fields:[
+      { id:"puits_lumiere", label:"Puits de lumière",         type:"yesno" },
+      { id:"conservation_pl",label:"Conservation puits",      type:"yesno" },
+      { id:"aeration",      label:"Aération / désenfumage",   type:"yesno" },
+      { id:"conservation_ae",label:"Conservation aération",   type:"yesno" },
+      { id:"trappe",        label:"Trappe d'accès",           type:"yesno" },
+      { id:"conservation_tr",label:"Conservation trappe",     type:"yesno" },
+      { id:"comment_obstacles",label:"Commentaire obstacles", type:"text" },
+    ]},
+    { title:"Actions ouvrage", fields:[
+      { id:"actions_ouvrage",label:"Actions à mener", type:"memo" },
+    ]},
+  ]},
+  { id:"electrique", icon:"⚡", title:"Électrique", groups:[
+    { title:"Localisation onduleur", fields:[
+      { id:"empl_onduleur",  label:"Emplacement onduleur",   type:"select", options:["Intérieur bâtiment","Local TGBT","Shelter","Sous-sol","Autre"] },
+      { id:"type_mur",       label:"Type de mur",            type:"select", options:["Béton","Placo BA13","Bois","Pierre","Autre"] },
+      { id:"comment_onduleur",label:"Commentaire",           type:"text" },
+    ]},
+    { title:"Conditions", fields:[
+      { id:"zone_accessible",label:"Zone accessible",           type:"yesno" },
+      { id:"local_frais",    label:"Local frais, sec, ventilé", type:"yesno" },
+      { id:"clim",           label:"Clim à prévoir",            type:"yesno" },
+      { id:"comment_conditions", label:"Commentaire(s)",        type:"memo" },
+    ]},
+    { title:"Protection électrique", fields:[
+      { id:"amperage",       label:"Ampérage disjoncteur (A)",   type:"text" },
+      { id:"paratonnerre",   label:"Paratonnerre",               type:"yesno" },
+      { id:"wifi",           label:"Connexion Wifi",             type:"yesno" },
+      { id:"comment_protection", label:"Commentaire(s)",         type:"memo" },
+    ]},
+    { title:"TGBT", fields:[
+      { id:"tgbt_conforme",  label:"TGBT conforme",              type:"yesno" },
+      { id:"tgbt_date",      label:"Date installation TGBT",     type:"text" },
+      { id:"onduleur_cote",  label:"Onduleur à côté du TGBT",    type:"yesno" },
+      { id:"place_tgbt",     label:"Place dispo dans TGBT",      type:"yesno" },
+      { id:"rangees_libres", label:"Nb rangées libres",          type:"text" },
+      { id:"phases",         label:"Mono/triphasé",              type:"select", options:["Monophasé","Triphasé"] },
+      { id:"comment_tgbt",   label:"Commentaire TGBT",           type:"text" },
+    ]},
+    { title:"PDL", fields:[
+      { id:"nouveau_pdl",    label:"Créer nouveau PDL",          type:"yesno" },
+      { id:"secu_eclairage", label:"Sécurité éclairage",         type:"yesno" },
+      { id:"dist_transfo",   label:"Distance transformateur (m)",type:"text" },
+      { id:"comment_pdl",    label:"Commentaire(s)",             type:"memo" },
+    ]},
+    { title:"Câblage AC/DC", fields:[
+      { id:"video_ac",       label:"Vidéo passage câbles AC",    type:"yesno" },
+      { id:"video_dc",       label:"Vidéo passage câbles DC",    type:"yesno" },
+      { id:"dist_dc",        label:"Distance câble DC (m)",      type:"text" },
+      { id:"dist_ac",        label:"Distance câble AC (m)",      type:"text" },
+      { id:"chemin_cable",   label:"Chemin de câble existant",   type:"yesno" },
+      { id:"gaine_enterree", label:"Gaine enterrée",             type:"yesno" },
+    ]},
+    { title:"Schémas & Terre", fields:[
+      { id:"schema_ac",      label:"Schéma AC réalisé",          type:"yesno" },
+      { id:"schema_dc",      label:"Schéma DC réalisé",          type:"yesno" },
+      { id:"regard_terre",   label:"Regard de terre",            type:"yesno" },
+      { id:"photos_regard",  label:"Photos regard prises",       type:"yesno" },
+      { id:"etat_regard",    label:"État du regard",             type:"select", options:["Fermé","Bon","Moyen","Mauvais"] },
+    ]},
+    { title:"Groupe électrogène", fields:[
+      { id:"groupe_elec",    label:"Groupe électrogène",         type:"yesno" },
+      { id:"batiments_groupe",label:"Bâtiments alimentés",       type:"text" },
+    ]},
+    { title:"Actions électrique", fields:[
+      { id:"actions_elec",   label:"Actions à mener",            type:"memo" },
+    ]},
+  ]},
+];
+
+const PHOTOS = [
+  "Vue générale du site","Vue rapprochée","Vue depuis voie publique",
+  "Ombre portée","Obstacle","Empierrement","Réseau GSM","Vis à vis",
+  "Stockage sur site","Accès chantier","Accès toiture","Point d'ancrage",
+  "Accès chantier poids lourd","Charpente","Couverture","Plan de masse",
+  "Puits de lumière","Aération","Onduleur (emplacement)","TGBT",
+  "Disjoncteur principal","PDL","Groupe électrogène","Regard de terre",
+  "Passage DC","Passage AC"
+];
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let currentPage = 0;
+const photoData = {}; // key: label -> { dataUrl, comment }
+const allPages = [...SECTIONS.map(s=>s.id), 'photos'];
+
+/* ═══════════════════════════════════════════
+   BUILD UI
+═══════════════════════════════════════════ */
+function buildNav() {
+  const nav = document.getElementById('nav');
+  const pages = [...SECTIONS, { id:'photos', icon:'📷', title:'Photos' }];
+  pages.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'nav-btn' + (i === 0 ? ' active' : '');
+    btn.id = `nav-${s.id}`;
+    btn.innerHTML = `<span class="nav-icon">${s.icon}</span>${s.title}<span class="nav-badge" id="badge-${s.id}">✓</span>`;
+    btn.onclick = () => switchPage(i);
+    nav.appendChild(btn);
+  });
+}
+
+function buildContent() {
+  const content = document.getElementById('content');
+
+  // Form sections
+  SECTIONS.forEach(section => {
+    const page = document.createElement('div');
+    page.className = 'page';
+    page.id = `page-${section.id}`;
+
+    section.groups.forEach(group => {
+      const card = document.createElement('div');
+      card.className = 'section-card';
+      card.innerHTML = `
+        <div class="section-card-header"><h3>${group.title}</h3></div>
+        <div class="section-card-body" id="body-${group.title.replace(/\s/g,'_')}"></div>`;
+      const body = card.querySelector('.section-card-body');
+
+      group.fields.forEach(field => {
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        row.innerHTML = `<span class="field-label">${field.label}</span>${buildField(field)}`;
+        body.appendChild(row);
+      });
+
+      page.appendChild(card);
+    });
+    content.appendChild(page);
+  });
+
+  // Photos page
+  const photosPage = document.createElement('div');
+  photosPage.className = 'page';
+  photosPage.id = 'page-photos';
+  photosPage.innerHTML = `
+    <div class="section-card" style="margin-bottom:20px">
+      <div class="section-card-header"><h3>📷 Photos à prendre sur chantier</h3></div>
+      <div class="section-card-body" style="color:var(--muted);font-size:.83rem">
+        Appuyez sur <strong style="color:var(--accent)">Prendre une photo</strong> pour ouvrir l'appareil photo.
+        Vous pouvez aussi choisir une image depuis la galerie. Ajoutez un commentaire si nécessaire.
+      </div>
+    </div>
+    <div class="photo-grid" id="photo-grid"></div>`;
+  content.appendChild(photosPage);
+
+  buildPhotoGrid();
+}
+
+function buildField(field) {
+  const val = loadVal(field.id);
+  if (field.type === 'rapnum') {
+    return `<div class="rapnum-display" id="f_${field.id}">${escHtml(val)||'Sera généré automatiquement'}</div>`;
+  }
+  if (field.type === 'text') {
+    return `<input class="field-input" type="text" id="f_${field.id}" value="${escHtml(val)}" oninput="saveVal('${field.id}',this.value);updateProgress()">`;
+  }
+  if (field.type === 'text_dept') {
+    return `<input class="field-input" type="text" id="f_${field.id}" value="${escHtml(val)}" maxlength="3" oninput="saveVal('${field.id}',this.value);updateRapNum();updateProgress()">`;
+  }
+  if (field.type === 'text_rapnum') {
+    return `<input class="field-input" type="text" id="f_${field.id}" value="${escHtml(val)}" oninput="saveVal('${field.id}',this.value);updateRapNum();updateProgress()">`;
+  }
+  if (field.type === 'memo') {
+    return `<textarea class="field-input" id="f_${field.id}" oninput="saveVal('${field.id}',this.value);updateProgress()">${escHtml(val)}</textarea>`;
+  }
+  if (field.type === 'select') {
+    const opts = field.options.map(o => `<option ${val===o?'selected':''}>${o}</option>`).join('');
+    return `<select class="field-input" id="f_${field.id}" onchange="saveVal('${field.id}',this.value);updateProgress()"><option value="">— Choisir —</option>${opts}</select>`;
+  }
+  if (field.type === 'yesno') {
+    return `<div class="yesno">
+      <label><input type="radio" name="f_${field.id}" value="Oui" ${val==='Oui'?'checked':''} onchange="saveVal('${field.id}','Oui');updateProgress()"><span>✔ Oui</span></label>
+      <label><input type="radio" name="f_${field.id}" value="Non" ${val==='Non'?'checked':''} onchange="saveVal('${field.id}','Non');updateProgress()"><span>✘ Non</span></label>
+    </div>`;
+  }
+  return '';
+}
+
+function buildPhotoGrid() {
+  const grid = document.getElementById('photo-grid');
+  PHOTOS.forEach((label, i) => {
+    const pid = photoId(label);
+    const card = document.createElement('div');
+    card.className = 'photo-card';
+    card.id = `pcard-${pid}`;
+    card.innerHTML = `
+      <div class="photo-card-header">
+        <span class="photo-num">${String(i+1).padStart(2,'0')}</span>
+        <span class="photo-label">${label}</span>
+        <span class="photo-status" id="pstatus-${pid}">En attente</span>
+      </div>
+      <img class="photo-preview" id="pimg-${pid}" src="" alt="">
+      <div class="photo-placeholder" id="pph-${pid}">
+        <span class="ph-icon">📷</span>
+        <span>Aucune photo</span>
+      </div>
+      <div class="photo-actions">
+        <input type="file" accept="image/*" capture="environment" class="photo-file-input" id="pinput-cam-${pid}" onchange="handlePhoto('${label}',this)">
+        <input type="file" accept="image/*" class="photo-file-input" id="pinput-gal-${pid}" onchange="handlePhoto('${label}',this)">
+        <button class="btn-photo primary" onclick="openCamera('${label}')">📷 Prendre une photo</button>
+        <button class="btn-photo" onclick="document.getElementById('pinput-gal-${pid}').click()">🖼 Choisir depuis la galerie</button>
+        <div class="photo-actions-row">
+          <button class="btn-photo" id="pbtn-annotate-${pid}" style="display:none" onclick="openAnnotate('${label}')">✏️ Annoter</button>
+          <button class="btn-photo danger" id="pbtn-delete-${pid}" style="display:none" onclick="deletePhoto('${label}')">🗑 Effacer</button>
+        </div>
+        <textarea class="photo-comment" id="pcomment-${pid}" placeholder="Commentaire (optionnel)..." oninput="savePhotoComment('${label}',this.value)">${photoData[label]?.comment||''}</textarea>
+      </div>`;
+    grid.appendChild(card);
+
+    // restore
+    if (photoData[label]?.dataUrl) showPhoto(label, photoData[label].dataUrl);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════ */
+function switchPage(idx) {
+  const pages = [...SECTIONS.map(s=>s.id), 'photos'];
+  pages.forEach((id, i) => {
+    document.getElementById(`page-${id}`)?.classList.toggle('active', i === idx);
+    document.getElementById(`nav-${id}`)?.classList.toggle('active', i === idx);
+  });
+  const titles = [...SECTIONS.map(s=>s.title), 'Photos'];
+  document.getElementById('topbar-title').textContent = titles[idx];
+  currentPage = idx;
+  updateProgress();
+}
+
+/* ═══════════════════════════════════════════
+   PROGRESS
+═══════════════════════════════════════════ */
+function updateProgress() {
+  let total = 0, filled = 0;
+  SECTIONS.forEach(s => s.groups.forEach(g => g.fields.forEach(f => {
+    total++;
+    const v = loadVal(f.id);
+    if (v && v.trim()) filled++;
+  })));
+  const pct = total > 0 ? Math.round(filled / total * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = pct + '%';
+}
+
+/* ═══════════════════════════════════════════
+   PHOTOS
+═══════════════════════════════════════════ */
+function photoId(label) {
+  return label.replace(/[^a-zA-Z0-9]/g,'_');
+}
+
+function handlePhoto(label, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    setPhoto(label, e.target.result);
+    showToast(`✔ Photo "${label}" enregistrée`);
+  };
+  reader.readAsDataURL(file);
+}
+
+function showPhoto(label, dataUrl) {
+  const pid = photoId(label);
+  const img = document.getElementById(`pimg-${pid}`);
+  const ph  = document.getElementById(`pph-${pid}`);
+  const st  = document.getElementById(`pstatus-${pid}`);
+  const card= document.getElementById(`pcard-${pid}`);
+  const btnAnnotate = document.getElementById(`pbtn-annotate-${pid}`);
+  const btnDelete   = document.getElementById(`pbtn-delete-${pid}`);
+  if (img) { img.src = dataUrl; img.classList.add('visible'); }
+  if (ph)  ph.classList.add('hidden');
+  if (st)  { st.textContent = '✔ OK'; st.className = 'photo-status done'; }
+  if (card) card.classList.add('has-photo');
+  if (btnAnnotate) btnAnnotate.style.display = 'block';
+  if (btnDelete)   btnDelete.style.display = 'block';
+  updatePhotoBadge();
+}
+
+/* Enregistre une nouvelle photo (caméra, galerie...) comme référence "originale",
+   ce qui permet de repartir d'une base propre à chaque nouvelle annotation. */
+function setPhoto(label, dataUrl) {
+  const comment = photoData[label]?.comment || '';
+  photoData[label] = { dataUrl, original: dataUrl, comment };
+  showPhoto(label, dataUrl);
+  savePhotos();
+}
+
+function deletePhoto(label) {
+  if (!photoData[label]?.dataUrl) return;
+  if (!confirm(`Supprimer la photo "${label}" ?`)) return;
+
+  delete photoData[label].dataUrl;
+  delete photoData[label].original;
+  savePhotos();
+
+  const pid = photoId(label);
+  const img = document.getElementById(`pimg-${pid}`);
+  const ph  = document.getElementById(`pph-${pid}`);
+  const st  = document.getElementById(`pstatus-${pid}`);
+  const card= document.getElementById(`pcard-${pid}`);
+  const btnAnnotate = document.getElementById(`pbtn-annotate-${pid}`);
+  const btnDelete   = document.getElementById(`pbtn-delete-${pid}`);
+  if (img) { img.src = ''; img.classList.remove('visible'); }
+  if (ph)  ph.classList.remove('hidden');
+  if (st)  { st.textContent = 'En attente'; st.className = 'photo-status'; }
+  if (card) card.classList.remove('has-photo');
+  if (btnAnnotate) btnAnnotate.style.display = 'none';
+  if (btnDelete)   btnDelete.style.display = 'none';
+  updatePhotoBadge();
+  showToast(`🗑 Photo "${label}" supprimée`);
+}
+
+function savePhotoComment(label, val) {
+  if (!photoData[label]) photoData[label] = {};
+  photoData[label].comment = val;
+  savePhotos();
+}
+
+function updatePhotoBadge() {
+  const count = Object.keys(photoData).filter(k => photoData[k]?.dataUrl).length;
+  const badge = document.getElementById('badge-photos');
+  if (badge) { badge.textContent = count; badge.classList.toggle('show', count > 0); }
+}
+
+/* ═══════════════════════════════════════════
+   CAMÉRA EN DIRECT
+═══════════════════════════════════════════ */
+let cameraStream = null;
+let cameraLabel = null;
+let cameraCapturedDataUrl = null;
+
+async function openCamera(label) {
+  cameraLabel = label;
+  cameraCapturedDataUrl = null;
+
+  const video   = document.getElementById('camera-video');
+  const preview = document.getElementById('camera-preview');
+  preview.classList.remove('visible');
+  preview.src = '';
+  video.style.display = 'block';
+  document.getElementById('camera-actions-live').style.display = 'flex';
+  document.getElementById('camera-actions-preview').style.display = 'none';
+  document.getElementById('modal-camera').classList.add('show');
+
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('getUserMedia non supporté');
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false
+    });
+    video.srcObject = cameraStream;
+  } catch (err) {
+    // Repli : sélecteur natif avec attribut capture (ouvre l'appareil photo du système)
+    document.getElementById('modal-camera').classList.remove('show');
+    const pid = photoId(label);
+    document.getElementById(`pinput-cam-${pid}`)?.click();
+  }
+}
+
+function stopCameraStream() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+}
+
+function closeCamera() {
+  stopCameraStream();
+  document.getElementById('modal-camera').classList.remove('show');
+  cameraLabel = null;
+  cameraCapturedDataUrl = null;
+}
+
+function captureCameraPhoto() {
+  const video  = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  if (!video.videoWidth) return;
+
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+  cameraCapturedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+  const preview = document.getElementById('camera-preview');
+  preview.src = cameraCapturedDataUrl;
+  preview.classList.add('visible');
+  video.style.display = 'none';
+  document.getElementById('camera-actions-live').style.display = 'none';
+  document.getElementById('camera-actions-preview').style.display = 'flex';
+
+  stopCameraStream(); // fige sur la capture, libère la caméra pendant l'aperçu
+}
+
+function retakeCameraPhoto() {
+  const video   = document.getElementById('camera-video');
+  const preview = document.getElementById('camera-preview');
+  cameraCapturedDataUrl = null;
+  preview.classList.remove('visible');
+  video.style.display = 'block';
+  document.getElementById('camera-actions-live').style.display = 'flex';
+  document.getElementById('camera-actions-preview').style.display = 'none';
+
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
+    .then(stream => { cameraStream = stream; video.srcObject = stream; })
+    .catch(() => closeCamera());
+}
+
+function confirmCameraPhoto() {
+  if (!cameraLabel || !cameraCapturedDataUrl) return;
+  setPhoto(cameraLabel, cameraCapturedDataUrl);
+  showToast(`✔ Photo "${cameraLabel}" enregistrée`);
+  closeCamera();
+}
+
+/* ═══════════════════════════════════════════
+   ANNOTATION DE PHOTO (DESSIN)
+═══════════════════════════════════════════ */
+let annotateLabel = null;
+let annotateCtx = null;
+let annotateDrawing = false;
+let annotateLast = null;
+let annotateColor = '#f87171';
+
+function scaledDims(w, h, maxDim) {
+  if (Math.max(w, h) <= maxDim) return { w, h };
+  const scale = maxDim / Math.max(w, h);
+  return { w: Math.round(w * scale), h: Math.round(h * scale) };
+}
+
+function setDrawColor(color) {
+  annotateColor = color;
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.toggle('active', d.dataset.color === color));
+}
+
+function openAnnotate(label) {
+  const entry = photoData[label];
+  if (!entry?.dataUrl) return;
+  annotateLabel = label;
+  document.getElementById('modal-annotate').classList.add('show');
+  setDrawColor(annotateColor);
+
+  const img = new Image();
+  img.onload = () => {
+    const { w, h } = scaledDims(img.naturalWidth, img.naturalHeight, 1600);
+    const canvas = document.getElementById('annotate-canvas');
+    canvas.width = w;
+    canvas.height = h;
+    annotateCtx = canvas.getContext('2d');
+    annotateCtx.drawImage(img, 0, 0, w, h);
+    bindAnnotateEvents(canvas);
+  };
+  // Repart de la version brute si elle existe, pour permettre de ré-annoter proprement
+  img.src = entry.original || entry.dataUrl;
+}
+
+function bindAnnotateEvents(canvas) {
+  canvas.onpointerdown = e => {
+    annotateDrawing = true;
+    annotateLast = getCanvasPos(canvas, e);
+  };
+  canvas.onpointermove = e => {
+    if (!annotateDrawing || !annotateCtx) return;
+    const pos = getCanvasPos(canvas, e);
+    annotateCtx.strokeStyle = annotateColor;
+    annotateCtx.lineWidth = Math.max(3, canvas.width / 200);
+    annotateCtx.lineCap = 'round';
+    annotateCtx.lineJoin = 'round';
+    annotateCtx.beginPath();
+    annotateCtx.moveTo(annotateLast.x, annotateLast.y);
+    annotateCtx.lineTo(pos.x, pos.y);
+    annotateCtx.stroke();
+    annotateLast = pos;
+  };
+  const stopDrawing = () => { annotateDrawing = false; annotateLast = null; };
+  canvas.onpointerup = stopDrawing;
+  canvas.onpointerleave = stopDrawing;
+  canvas.onpointercancel = stopDrawing;
+}
+
+function getCanvasPos(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * (canvas.width / rect.width),
+    y: (e.clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+function clearAnnotations() {
+  if (!annotateLabel || !annotateCtx) return;
+  const entry = photoData[annotateLabel];
+  const canvas = document.getElementById('annotate-canvas');
+  const img = new Image();
+  img.onload = () => {
+    annotateCtx.clearRect(0, 0, canvas.width, canvas.height);
+    annotateCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  };
+  img.src = entry.original || entry.dataUrl;
+}
+
+function closeAnnotate() {
+  document.getElementById('modal-annotate').classList.remove('show');
+  annotateLabel = null;
+  annotateCtx = null;
+}
+
+function saveAnnotation() {
+  if (!annotateLabel || !annotateCtx) return;
+  const canvas = document.getElementById('annotate-canvas');
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  if (!photoData[annotateLabel].original) {
+    photoData[annotateLabel].original = photoData[annotateLabel].dataUrl;
+  }
+  photoData[annotateLabel].dataUrl = dataUrl;
+  showPhoto(annotateLabel, dataUrl);
+  savePhotos();
+  showToast(`✔ Annotation enregistrée pour "${annotateLabel}"`);
+  closeAnnotate();
+}
+
+/* ═══════════════════════════════════════════
+   CONTEXTE PROJET / DOCUMENT
+═══════════════════════════════════════════ */
+const __params = new URLSearchParams(location.search);
+const DOC_ID = __params.get('doc') || 'standalone';
+const PROJECT_ID = __params.get('project') || '';
+const DOC_LABEL = __params.get('label') || '';
+const PFX = 'doc_' + DOC_ID + '_';
+function goBackToProject(){
+  location.href = PROJECT_ID ? ('index.html?project='+encodeURIComponent(PROJECT_ID)) : 'index.html';
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  const lbl=document.getElementById('doc-context-label');
+  if(lbl && DOC_LABEL) lbl.textContent = decodeURIComponent(DOC_LABEL);
+});
+
+/* ═══════════════════════════════════════════
+   LOCALSTORAGE
+═══════════════════════════════════════════ */
+function saveVal(id, val) {
+  try { localStorage.setItem(PFX + id, val); } catch(e){}
+}
+function loadVal(id) {
+  try {
+    const v = localStorage.getItem(PFX + id);
+    if (v !== null) return v;
+  } catch(e){}
+  // default
+  const allFields = SECTIONS.flatMap(s=>s.groups.flatMap(g=>g.fields));
+  const f = allFields.find(x=>x.id===id);
+  return f?.default || '';
+}
+function savePhotos() {
+  try { localStorage.setItem(PFX+'photos', JSON.stringify(photoData)); } catch(e){}
+}
+function loadPhotos() {
+  try {
+    const raw = localStorage.getItem(PFX+'photos');
+    if (raw) Object.assign(photoData, JSON.parse(raw));
+  } catch(e){}
+}
+
+/* ═══════════════════════════════════════════
+   EXPORT PDF
+═══════════════════════════════════════════ */
+function exportPDF() {
+  // Mark all pages as print-active for @media print
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('print-active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.add('print-active'));
+
+  // Adapter la hauteur des zones de texte (mémos) à leur contenu pour l'export.
+  // Les pages non actives sont display:none à l'écran (scrollHeight = 0), on les
+  // rend donc temporairement mesurables (visibility:hidden, toujours en layout)
+  // pour calculer une hauteur réelle avant d'imprimer.
+  document.body.classList.add('measuring-print');
+  const textareas = document.querySelectorAll('textarea.field-input');
+  textareas.forEach(t => {
+    t.dataset.origHeight = t.style.height || '';
+    t.style.height = 'auto';
+    t.style.height = t.scrollHeight + 'px';
+  });
+  document.body.classList.remove('measuring-print');
+
+  // Les <input> ne peuvent JAMAIS afficher plusieurs lignes, même avec du CSS :
+  // pour l'export, on remplace temporairement chaque champ texte par un bloc
+  // qui reprend sa valeur complète et peut retourner à la ligne.
+  const printTextClones = [];
+  document.querySelectorAll('input.field-input[type="text"]').forEach(inp => {
+    const div = document.createElement('div');
+    div.className = 'print-text-value';
+    div.textContent = inp.value || '\u2014';
+    inp.insertAdjacentElement('afterend', div);
+    inp.classList.add('print-hide-field');
+    printTextClones.push({ input: inp, div });
+  });
+
+  // Build print header
+  let header = document.getElementById('print-header-el');
+  if (!header) {
+    header = document.createElement('div');
+    header.id = 'print-header-el';
+    header.className = 'print-header';
+    document.body.appendChild(header);
+  }
+  const proj = loadVal('projet_nom') || '—';
+  const tech = loadVal('technicien') || '—';
+  const date = loadVal('date') || new Date().toLocaleDateString('fr-FR');
+  header.innerHTML = `
+    <h1 style="font-family:Syne,sans-serif;font-size:1.5rem;color:#1a4a8a;margin-bottom:4px">RAPPORT VISITE TECHNIQUE</h1>
+    <p style="font-size:.85rem;color:#555;margin-bottom:16px">Projet : <strong>${proj}</strong> &nbsp;|&nbsp; Technicien : <strong>${tech}</strong> &nbsp;|&nbsp; Date : <strong>${date}</strong></p>
+    <hr style="border:none;border-top:2px solid #1a4a8a;margin-bottom:20px">`;
+
+  // Build print photos section
+  let printPhotos = document.getElementById('print-photos-el');
+  if (!printPhotos) {
+    printPhotos = document.createElement('div');
+    printPhotos.id = 'print-photos-el';
+    printPhotos.className = 'print-photos';
+    document.body.appendChild(printPhotos);
+  }
+  const photoEntries = Object.entries(photoData).filter(([,v])=>v?.dataUrl);
+  if (photoEntries.length) {
+    printPhotos.innerHTML = `<h2 style="font-family:Syne,sans-serif;font-size:1.1rem;color:#1a4a8a;margin:20px 0 12px">PHOTOS</h2>` +
+      photoEntries.map(([label, v]) => `
+        <div class="print-photo-item">
+          <p style="font-weight:600;font-size:.88rem;margin-bottom:6px">${label}</p>
+          <img src="${v.dataUrl}" style="max-width:100%;max-height:200px;object-fit:contain;border:1px solid #ddd;border-radius:6px">
+          ${v.comment ? `<p class="print-photo-caption">Commentaire : ${v.comment}</p>` : ''}
+        </div>`).join('');
+  } else {
+    printPhotos.innerHTML = '';
+  }
+
+  setTimeout(() => {
+    window.print();
+    // cleanup after print
+    setTimeout(() => {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('print-active'));
+      document.getElementById(`page-${allPages[currentPage]}`)?.classList.add('active');
+      // Restaurer la hauteur d'origine des zones de texte
+      textareas.forEach(t => { t.style.height = t.dataset.origHeight || ''; });
+      // Retirer les blocs texte temporaires et réafficher les champs d'origine
+      printTextClones.forEach(({ input, div }) => {
+        input.classList.remove('print-hide-field');
+        div.remove();
+      });
+    }, 1000);
+  }, 100);
+}
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+function showToast(msg, duration=2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), duration);
+}
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ═══════════════════════════════════════════
+   NUMÉRO DE RAPPORT
+═══════════════════════════════════════════ */
+function getNextRapNum() {
+  try {
+    const n = parseInt(localStorage.getItem(PFX+'rapnum_counter') || '0') + 1;
+    return n;
+  } catch(e) { return 1; }
+}
+function saveRapCounter(n) {
+  try { localStorage.setItem(PFX+'rapnum_counter', String(n)); } catch(e) {}
+}
+function buildRapNum() {
+  const dept  = (loadVal('dept') || '').trim().replace(/[^a-zA-Z0-9]/g,'').toUpperCase().substring(0,3);
+  const proj  = (loadVal('projet_nom') || '').trim().replace(/[^a-zA-Z0-9]/g,'').toUpperCase().substring(0,12);
+  const num   = String(parseInt(localStorage.getItem(PFX+'rapnum_counter') || '1')).padStart(2,'0');
+  const parts = [dept, proj, 'RAPVT', num].filter(Boolean);
+  return parts.join(' - ');
+}
+function updateRapNum() {
+  const val = buildRapNum();
+  saveVal('rapport_num', val);
+  const el = document.getElementById('f_rapport_num');
+  if (el) el.textContent = val || 'Sera généré automatiquement';
+}
+
+/* ═══════════════════════════════════════════
+   RESET
+═══════════════════════════════════════════ */
+function confirmReset() {
+  document.getElementById('modal-reset').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modal-reset').classList.remove('show');
+}
+function doReset() {
+  // increment counter before clearing
+  const currentNum = parseInt(localStorage.getItem(PFX+'rapnum_counter') || '0') + 1;
+  saveRapCounter(currentNum);
+
+  // clear all form values except counter and dept (keep dept for convenience)
+  const keepDept = loadVal('dept');
+  const allKeys = Object.keys(localStorage).filter(k => k.startsWith(PFX) && k !== PFX+'rapnum_counter');
+  allKeys.forEach(k => localStorage.removeItem(k));
+
+  // restore dept
+  if (keepDept) saveVal('dept', keepDept);
+
+  // clear photo data
+  Object.keys(photoData).forEach(k => delete photoData[k]);
+
+  closeModal();
+
+  // rebuild UI
+  document.getElementById('content').innerHTML = '';
+  document.getElementById('nav').innerHTML = '';
+  buildNav();
+  buildContent();
+  switchPage(0);
+
+  // set new rapnum
+  localStorage.setItem(PFX+'rapnum_counter', String(currentNum));
+  updateRapNum();
+  updateProgress();
+  updatePhotoBadge();
+
+  showToast(`✔ Nouveau rapport — N° ${currentNum.toString().padStart(2,'0')}`);
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+(function init() {
+  loadPhotos();
+  buildNav();
+  buildContent();
+  switchPage(0);
+  updateProgress();
+  updatePhotoBadge();
+
+  // restore photo UI
+  PHOTOS.forEach(label => {
+    if (photoData[label]?.dataUrl) {
+      showPhoto(label, photoData[label].dataUrl);
+      const pid = photoId(label);
+      const commentEl = document.getElementById(`pcomment-${pid}`);
+      if (commentEl) commentEl.value = photoData[label].comment || '';
+    }
+  });
+
+  // init counter if first time
+  if (!localStorage.getItem(PFX+'rapnum_counter')) {
+    localStorage.setItem(PFX+'rapnum_counter', '1');
+  }
+  updateRapNum();
+
+  showToast('📋 Formulaire chargé — données sauvegardées automatiquement');
+})();
+</script>
+</body>
+</html>
