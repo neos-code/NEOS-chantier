@@ -864,7 +864,6 @@ const SECTIONS = [
       { id:"stockage",      label:"Stockage sur site",         type:"yesno" },
       { id:"acces_toit",    label:"Accès au toit",             type:"select", options:["Facile","Difficile","Impossible"] },
       { id:"dechargement",  label:"Moyen de déchargement",     type:"select", options:["Neos","Sous-traitant","Transporteur","Client"] },
-      { id:"resp_dechargement",label:"Responsable déchargement", type:"select", options:["Neos","Sous-traitant","Client"] },
       { id:"engin_travaux", label:"Engin travaux",             type:"select", options:["Télescopique","Nacelle"] },
       { id:"resp_engin_travaux",label:"Responsable engin travaux", type:"select", options:["Neos","Sous-traitant","Client"] },
     ]},
@@ -920,6 +919,9 @@ const SECTIONS = [
       { id:"comment_obstacles",label:"Commentaire obstacles", type:"text" },
     ]},
     { title:"Actions ouvrage", fields:[
+      { id:"depose_couverture", label:"Dépose couverture", type:"yesno" },
+      { id:"prest_pose",   label:"Prestation Pose",   type:"select", options:["NEOS","Sous-traitant","Client"], showIf:{field:"depose_couverture", value:"Oui"} },
+      { id:"prest_depose", label:"Prestation dépose", type:"select", options:["NEOS","Sous-traitant","Client"], showIf:{field:"depose_couverture", value:"Oui"} },
       { id:"actions_ouvrage",label:"Actions à mener", type:"memo" },
     ]},
   ]},
@@ -984,11 +986,11 @@ const SECTIONS = [
 
 const PHOTOS = [
   "Vue générale du site","Vue rapprochée","Vue depuis voie publique",
-  "Ombre portée","Obstacle","Empierrement","Réseau GSM","Vis à vis",
-  "Stockage sur site","Accès chantier","Accès toiture","Point d'ancrage",
+  "Ombre portée","Obstacle","Réseau GSM",
+  "Stockage sur site","Accès chantier","Accès toiture",
   "Accès chantier poids lourd","Charpente","Couverture","Plan de masse",
   "Puits de lumière","Aération","Onduleur (emplacement)","TGBT",
-  "Disjoncteur principal","PDL","Groupe électrogène","Regard de terre",
+  "Disjoncteur principal","PDL","Groupe électrogène","Mise à la terre",
   "Passage DC","Passage AC"
 ];
 
@@ -1035,6 +1037,11 @@ function buildContent() {
       group.fields.forEach(field => {
         const row = document.createElement('div');
         row.className = 'field-row';
+        row.id = 'row-' + field.id;
+        if (field.showIf) {
+          const triggerVal = loadVal(field.showIf.field);
+          row.style.display = (triggerVal === field.showIf.value) ? '' : 'none';
+        }
         row.innerHTML = `<span class="field-label">${field.label}</span>${buildField(field)}`;
         body.appendChild(row);
       });
@@ -1060,6 +1067,16 @@ function buildContent() {
   content.appendChild(photosPage);
 
   buildPhotoGrid();
+}
+
+function updateConditionalFields(){
+  SECTIONS.forEach(section => section.groups.forEach(group => group.fields.forEach(field => {
+    if (!field.showIf) return;
+    const row = document.getElementById('row-' + field.id);
+    if (!row) return;
+    const triggerVal = loadVal(field.showIf.field);
+    row.style.display = (triggerVal === field.showIf.value) ? '' : 'none';
+  })));
 }
 
 function buildField(field) {
@@ -1156,6 +1173,7 @@ function updateProgress() {
   const pct = total > 0 ? Math.round(filled / total * 100) : 0;
   document.getElementById('progress-fill').style.width = pct + '%';
   document.getElementById('progress-label').textContent = pct + '%';
+  updateConditionalFields();
 }
 
 /* ═══════════════════════════════════════════
