@@ -534,6 +534,36 @@ function __dateFromISO(iso){
 function sj(id, val) { try { localStorage.setItem(PFX+id, JSON.stringify(val)); } catch(e){} }
 function gj(id, def) { try { const v=localStorage.getItem(PFX+id); return v?JSON.parse(v):def; } catch(e){ return def; } }
 
+/* ═══ SYNCHRONISATION DU TABLEAU D'ACTIONS PROJET ═══ */
+function saveActionRows(){
+  sj('action_rows',actionRows);
+  syncActionsToProject();
+}
+function syncActionsToProject(){
+  if(!PROJECT_ID) return;
+  let all=[];
+  try{ all=JSON.parse(localStorage.getItem('neos_project_actions')||'[]'); }catch(e){}
+  all=all.filter(a=>a.sourceDocId!==DOC_ID);
+  actionRows.forEach((row,i)=>{
+    if(!(row.qui||row.date||row.action)) return;
+    const existing = (JSON.parse(localStorage.getItem('neos_project_actions')||'[]'))
+      .find(a=>a.sourceDocId===DOC_ID && a.rowIndex===i);
+    all.push({
+      id: DOC_ID+'_'+i,
+      projectId: PROJECT_ID,
+      qui: row.qui||'',
+      date: row.date||'',
+      action: row.action||'',
+      statut: existing?.statut || 'À faire',
+      sourceDocId: DOC_ID,
+      sourceLabel: DOC_LABEL || 'Fermeture de chantier',
+      rowIndex: i,
+      updatedAt: Date.now()
+    });
+  });
+  try{ localStorage.setItem('neos_project_actions', JSON.stringify(all)); }catch(e){}
+}
+
 /* ═══ RAPPORT NUM ═══ */
 function buildRapNum() {
   const proj = (g('projet_nom')||'').trim().replace(/[^a-zA-Z0-9]/g,'').toUpperCase().substring(0,12);
@@ -813,7 +843,7 @@ function syncReserveActions() {
 
   // Merge: reserve actions first, then manual
   actionRows = [...reserveActions, ...manualRows];
-  sj('action_rows', actionRows);
+  saveActionRows();
   renderActions();
 }
 
@@ -840,9 +870,9 @@ function renderActions() {
       ? `<span style="font-size:.65rem;color:var(--danger);font-family:'DM Mono',monospace;margin-right:6px;opacity:.8">⚠ ${row._reserveId}</span>`
       : '';
     tr.innerHTML = `
-      <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].qui=this.value;sj('action_rows',actionRows)"></td>
-      <td><input type="date" value="${__dateToISO(row.date)}" ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} onchange="actionRows[${i}].date=__dateFromISO(this.value);sj('action_rows',actionRows)"></td>
-      <td><div style="display:flex;align-items:center">${badge}<input value="${esc(row.action)}" placeholder="Description de l'action..." ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].action=this.value;sj('action_rows',actionRows)"></div></td>
+      <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].qui=this.value;saveActionRows()"></td>
+      <td><input type="date" value="${__dateToISO(row.date)}" ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} onchange="actionRows[${i}].date=__dateFromISO(this.value);saveActionRows()"></td>
+      <td><div style="display:flex;align-items:center">${badge}<input value="${esc(row.action)}" placeholder="Description de l'action..." ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].action=this.value;saveActionRows()"></div></td>
       <td>${isReserve ? '<span style="font-size:.7rem;color:var(--muted);padding:4px 8px" title="Gérer depuis la section Ouvrage/Électrique">🔒</span>' : `<button class="btn-del-row" onclick="delActionRow(${i})">✕</button>`}</td>`;
     tbody.appendChild(tr);
   });
@@ -850,7 +880,7 @@ function renderActions() {
 
 function addActionRow() {
   actionRows.push({ qui:'', date:'', action:'' });
-  sj('action_rows', actionRows);
+  saveActionRows();
   renderActions();
 }
 
@@ -860,7 +890,7 @@ function delActionRow(i) {
   const manualRows = actionRows.filter(r => !r._reserveId);
   if (manualRows.length <= 1) return;
   actionRows.splice(i, 1);
-  sj('action_rows', actionRows);
+  saveActionRows();
   renderActions();
 }
 

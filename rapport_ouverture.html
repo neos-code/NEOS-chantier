@@ -317,6 +317,38 @@ function __dateFromISO(iso){
 function sj(id,val){try{localStorage.setItem(PFX+id,JSON.stringify(val))}catch(e){}}
 function gj(id,def){try{const v=localStorage.getItem(PFX+id);return v?JSON.parse(v):def}catch(e){return def}}
 
+/* ═══ SYNCHRONISATION DU TABLEAU D'ACTIONS PROJET ═══
+   Chaque modification des actions de CE document met à jour le tableau
+   d'actions global du projet, visible depuis le tableau de bord. */
+function saveActionRows(){
+  sj('action_rows',actionRows);
+  syncActionsToProject();
+}
+function syncActionsToProject(){
+  if(!PROJECT_ID) return;
+  let all=[];
+  try{ all=JSON.parse(localStorage.getItem('neos_project_actions')||'[]'); }catch(e){}
+  all=all.filter(a=>a.sourceDocId!==DOC_ID);
+  actionRows.forEach((row,i)=>{
+    if(!(row.qui||row.date||row.action)) return;
+    const existing = (JSON.parse(localStorage.getItem('neos_project_actions')||'[]'))
+      .find(a=>a.sourceDocId===DOC_ID && a.rowIndex===i);
+    all.push({
+      id: DOC_ID+'_'+i,
+      projectId: PROJECT_ID,
+      qui: row.qui||'',
+      date: row.date||'',
+      action: row.action||'',
+      statut: existing?.statut || 'À faire',
+      sourceDocId: DOC_ID,
+      sourceLabel: DOC_LABEL || 'Ouverture de chantier',
+      rowIndex: i,
+      updatedAt: Date.now()
+    });
+  });
+  try{ localStorage.setItem('neos_project_actions', JSON.stringify(all)); }catch(e){}
+}
+
 /* ═══ RAPPORT NUM ═══ */
 function buildRapNum(){
   const proj=(g('projet_nom')||'').trim().replace(/[^a-zA-Z0-9]/g,'').toUpperCase().substring(0,12);
@@ -584,18 +616,18 @@ function renderActions(){
     const isPI=!!row._pi; // rows injected from points importants
     tr.style.background=isPI?'rgba(248,113,113,.04)':'';
     tr.innerHTML=`
-      <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].qui=this.value;sj('action_rows',actionRows)"></td>
-      <td><input type="date" value="${__dateToISO(row.date)}" ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} onchange="actionRows[${i}].date=__dateFromISO(this.value);sj('action_rows',actionRows)"></td>
+      <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].qui=this.value;saveActionRows()"></td>
+      <td><input type="date" value="${__dateToISO(row.date)}" ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} onchange="actionRows[${i}].date=__dateFromISO(this.value);saveActionRows()"></td>
       <td>
         ${isPI?`<span style="font-size:.7rem;color:var(--danger);font-family:'DM Mono',monospace;margin-right:6px;vertical-align:middle">⚠ ${esc(row._pi)}</span>`:''}
-        <input value="${esc(row.action)}" placeholder="Description de l'action..." ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].action=this.value;sj('action_rows',actionRows)">
+        <input value="${esc(row.action)}" placeholder="Description de l'action..." ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].action=this.value;saveActionRows()">
       </td>
       <td>${isPI?'<span title="Supprimez la réserve dans Points importants" style="opacity:.25;font-size:.8rem;padding:4px 8px;display:inline-block">🔒</span>':`<button class="btn-del-row" onclick="delActionRow(${i})">✕</button>`}</td>`;
     tbody.appendChild(tr);
   });
 }
-function addActionRow(){actionRows.push({qui:'',date:'',action:''});sj('action_rows',actionRows);renderActions()}
-function delActionRow(i){if(actionRows.length<=1)return;actionRows.splice(i,1);sj('action_rows',actionRows);renderActions()}
+function addActionRow(){actionRows.push({qui:'',date:'',action:''});saveActionRows();renderActions()}
+function delActionRow(i){if(actionRows.length<=1)return;actionRows.splice(i,1);saveActionRows();renderActions()}
 
 /* ═══ POINTS IMPORTANTS ═══ */
 const PI_POINTS = ['Point sécu','Point tech','Matériel'];
@@ -719,7 +751,7 @@ function syncPIToActions(){
   // 4. If table is completely empty add one blank manual row
   if(actionRows.length===0) actionRows=[{qui:'',date:'',action:''}];
 
-  sj('action_rows',actionRows);
+  saveActionRows();
   renderActions();
 }
 
