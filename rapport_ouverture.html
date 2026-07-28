@@ -255,6 +255,7 @@ select.field-input option{background:var(--card)}
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="jspdf.umd.min.js"></script>
 <script>
 const PAGES = [
   { id:'entete',       icon:'📋', title:'En-tête' },
@@ -692,77 +693,155 @@ function restorePhotos(){
 }
 
 /* ═══ EXPORT PDF ═══ */
-/* ═══ CHAMPS "IMPRIMABLES" (fix mobile) ═══
-   Sur mobile, la valeur des <input>/<select>/<textarea> n'est pas toujours
-   peinte par le moteur d'impression du navigateur. On la remplace donc par
-   un <div> texte équivalent, uniquement pendant l'impression. */
-function __preparePrintFields(){
-  const clones=[];
-  const isInModal=el=>el.closest('.modal-overlay');
-  document.querySelectorAll('input[type="text"],input[type="date"],input[type="number"],input[type="tel"],input[type="email"],input:not([type])').forEach(inp=>{
-    if(isInModal(inp))return;
-    const div=document.createElement('div');
-    div.className='__print-value'+(inp.classList.contains('field-input')?' field-input':'');
-    div.textContent=(inp.value&&inp.value.trim())?inp.value:'\u2014';
-    inp.insertAdjacentElement('afterend',div);
-    inp.classList.add('__print-hide');
-    clones.push({el:inp,div});
+/* ═══════════════════════════════════════════
+   EXPORT PDF (génération directe, sans passer par
+   l'impression du navigateur — plus fiable sur mobile)
+═══════════════════════════════════════════ */
+function __loadImageDims(dataUrl){
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 0, h: 0 });
+    img.src = dataUrl;
   });
-  document.querySelectorAll('select').forEach(sel=>{
-    if(isInModal(sel))return;
-    const div=document.createElement('div');
-    div.className='__print-value'+(sel.classList.contains('field-input')?' field-input':'');
-    const opt=sel.options[sel.selectedIndex];
-    div.textContent=opt?opt.textContent:'\u2014';
-    sel.insertAdjacentElement('afterend',div);
-    sel.classList.add('__print-hide');
-    clones.push({el:sel,div});
-  });
-  document.querySelectorAll('textarea').forEach(ta=>{
-    if(isInModal(ta))return;
-    const div=document.createElement('div');
-    div.className='__print-value __print-value-multiline'+(ta.classList.contains('field-input')?' field-input':'');
-    div.textContent=(ta.value&&ta.value.trim())?ta.value:'\u2014';
-    ta.insertAdjacentElement('afterend',div);
-    ta.classList.add('__print-hide');
-    clones.push({el:ta,div});
-  });
-  return clones;
-}
-function __restorePrintFields(clones){
-  clones.forEach(({el,div})=>{ el.classList.remove('__print-hide'); div.remove(); });
 }
 
-function exportPDF(){
-  document.querySelectorAll('.page').forEach(p=>p.classList.add('active'));
-  const __printClones = __preparePrintFields();
-  showToast(`🔧 Diagnostic : ${__printClones.length} champs préparés, ${document.querySelectorAll('.page.active').length} pages actives`, 6000);
-  let header=document.getElementById('print-header-el');
-  if(!header){header=document.createElement('div');header.id='print-header-el';header.className='print-header';document.body.appendChild(header);}
-  const proj=g('projet_nom')||'—',tech=g('technicien')||'—',date=g('date')||new Date().toLocaleDateString('fr-FR');
-  header.innerHTML=`
-    <h1 style="font-family:Syne,sans-serif;font-size:1.5rem;color:#1a7a8a;margin-bottom:4px">RAPPORT OUVERTURE CHANTIER</h1>
-    <p style="font-size:.85rem;color:#555;margin-bottom:4px">N° : <strong>${buildRapNum()}</strong> &nbsp;|&nbsp; Technicien : <strong>${tech}</strong> &nbsp;|&nbsp; Date : <strong>${date}</strong></p>
-    <p style="font-size:.85rem;color:#555;margin-bottom:16px">Projet : <strong>${proj}</strong></p>
-    <hr style="border:none;border-top:2px solid #1a7a8a;margin-bottom:20px">`;
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        let __cleaned = false;
-        const __cleanup = () => {
-          if (__cleaned) return;
-          __cleaned = true;
-          document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-          document.getElementById('page-'+PAGES[currentPage].id)?.classList.add('active');
-          __restorePrintFields(__printClones);
-          window.removeEventListener('afterprint', __cleanup);
-        };
-        window.addEventListener('afterprint', __cleanup);
-        window.print();
-        setTimeout(__cleanup, 20000);
-      }, 350);
+async function exportPDF(){
+  showToast('📄 Génération du PDF en cours…', 4000);
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'mm', format:'a4' });
+    const pageW=210, pageH=297, marginX=15, contentW=pageW-marginX*2, bottomLimit=pageH-15;
+    let y=20;
+    const checkBreak=(needed)=>{ if(y+needed>bottomLimit){ doc.addPage(); y=20; } };
+    const sectionTitle=(t)=>{
+      checkBreak(10);
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(26,122,138);
+      doc.text(t, marginX, y); y+=3;
+      doc.setDrawColor(210,210,210); doc.setLineWidth(0.2);
+      doc.line(marginX,y,pageW-marginX,y); y+=5;
+    };
+    const addField=(label,val)=>{
+      const value=(val&&String(val).trim())?String(val):'\u2014';
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(60,60,60);
+      const labelText=label+' :';
+      doc.text(labelText, marginX, y);
+      const labelW=doc.getTextWidth(labelText);
+      const valX=marginX+Math.min(labelW+3,70);
+      const valW=contentW-(valX-marginX);
+      doc.setFont('helvetica','normal'); doc.setTextColor(15,15,15);
+      const lines=doc.splitTextToSize(value, valW);
+      checkBreak(lines.length*4.3+2);
+      doc.setFont('helvetica','bold'); doc.setTextColor(60,60,60);
+      doc.text(labelText, marginX, y);
+      doc.setFont('helvetica','normal'); doc.setTextColor(15,15,15);
+      doc.text(lines, valX, y);
+      y += Math.max(lines.length*4.3,4.3)+1.8;
+    };
+
+    const proj=g('projet_nom')||'\u2014', tech=g('technicien')||'\u2014', date=g('date')||new Date().toLocaleDateString('fr-FR');
+    const rapnum=buildRapNum()||'\u2014';
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(26,122,138);
+    doc.text('RAPPORT OUVERTURE CHANTIER', marginX, y); y+=6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(85,85,85);
+    doc.text(`N° : ${rapnum}`, marginX, y); y+=5;
+    doc.text(`Projet : ${proj}   |   Technicien : ${tech}   |   Date : ${date}`, marginX, y); y+=4;
+    doc.setDrawColor(26,122,138); doc.setLineWidth(0.6);
+    doc.line(marginX,y,pageW-marginX,y); y+=8;
+
+    sectionTitle('Informations du projet');
+    addField('Localisation / GPS', g('localisation'));
+    addField('Nom du client', g('client_nom'));
+    addField('Puissance prévue (kWc)', g('puissance'));
+    addField("Type d'installation", g('type_installation'));
+    addField('Type de projet', g('type_projet'));
+
+    sectionTitle('Participants présents');
+    for(let i=1;i<=5;i++){
+      const p=g('participant_'+i);
+      if(p && p.trim()) addField('Participant '+i, p.replace(/\n/g,' — '));
+    }
+
+    sectionTitle('Points de la réunion');
+    addField('Rappel du projet', g('rappel_projet'));
+    addField('Date de démarrage chantier', g('date_demarrage'));
+    addField('Durée des travaux estimée', g('duree_travaux_estimee'));
+    addField('Date de mise en service sous-traitant', g('date_mes_st'));
+    addField('Date de mise en service NEOS', g('date_mes_neos'));
+    addField('Points spécifiques', g('points_specifiques'));
+
+    sectionTitle('Points importants');
+    PI_POINTS.forEach(label=>{
+      const pid=piId(label);
+      const state=g('pi_state_'+pid);
+      const stateTxt = state==='ras' ? 'RAS' : state==='reserve' ? 'Réserves' : '\u2014';
+      addField(label, stateTxt);
+      const cmt=g('pi_cmt_'+pid);
+      if(cmt && cmt.trim()) addField('  Commentaire', cmt);
+      if(state==='reserve'){
+        const actions=gj('pi_actions_'+pid,[]);
+        actions.forEach((a,i)=>{
+          if(a.action||a.qui||a.date){
+            addField(`  Action ${i+1}`, `${a.action||'\u2014'} (Responsable: ${a.qui||'\u2014'}, Date: ${a.date||'\u2014'})`);
+          }
+        });
+      }
     });
-  });
+
+    sectionTitle('Actions à mener');
+    (actionRows||[]).forEach((row,i)=>{
+      if(row.qui || row.date || row.action){
+        addField(`Action ${i+1}`, `${row.action||'\u2014'} (Responsable: ${row.qui||'\u2014'}, Date: ${row.date||'\u2014'})`);
+      }
+    });
+
+    sectionTitle('Prochaine réunion');
+    addField('Prochaine réunion', g('prochaine_reunion','À définir'));
+    addField('Date', g('date_prochaine_reunion'));
+    addField('Rédigé par', g('redige_par'));
+
+    // Photos
+    const photoSections = PHOTO_SECTIONS.filter(sec => sec.labels.some(l => (photoData[l]||[]).length));
+    if(photoSections.length){
+      doc.addPage(); y=20;
+      doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(26,122,138);
+      doc.text('PHOTOS', marginX, y); y+=9;
+      for(const sec of photoSections){
+        for(const label of sec.labels){
+          const photos=photoData[label]||[];
+          if(!photos.length) continue;
+          checkBreak(8);
+          doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(26,122,138);
+          doc.text(`${sec.title} — ${label}`, marginX, y); y+=5;
+          for(const dataUrl of photos){
+            const dims = await __loadImageDims(dataUrl);
+            let imgW=contentW, imgH=70;
+            if(dims.w && dims.h){
+              imgW=Math.min(contentW,130); imgH=imgW*(dims.h/dims.w);
+              if(imgH>100){ imgH=100; imgW=imgH*(dims.w/dims.h); }
+            }
+            checkBreak(imgH+6);
+            try {
+              const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+              doc.addImage(dataUrl, fmt, marginX, y, imgW, imgH);
+              y += imgH+4;
+            } catch(e){
+              doc.setFont('helvetica','italic'); doc.setFontSize(8.5);
+              doc.text('(photo non intégrée)', marginX, y); y+=5;
+            }
+          }
+          y+=3;
+        }
+      }
+    }
+
+    const filename = `RapportOuverture_${rapnum.replace(/[^a-zA-Z0-9-]/g,'_')}.pdf`;
+    doc.save(filename);
+    showToast('✔ PDF généré : '+filename, 3500);
+  } catch(e){
+    console.error(e);
+    showToast('\u274c Erreur lors de la génération du PDF : '+e.message, 6000);
+  }
 }
 
 /* ═══ RESET ═══ */

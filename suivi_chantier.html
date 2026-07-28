@@ -251,6 +251,7 @@ select.field-input option{background:var(--card)}
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="jspdf.umd.min.js"></script>
 <script>
 const __params = new URLSearchParams(location.search);
 const DOC_ID = __params.get('doc') || 'standalone';
@@ -442,79 +443,115 @@ function delPhoto(id,idx){
   refreshThumbs(id);
 }
 
-/* ═══ CHAMPS "IMPRIMABLES" (fix mobile) ═══
-   Sur mobile, la valeur des <input>/<select>/<textarea> n'est pas toujours
-   peinte par le moteur d'impression du navigateur. On la remplace donc par
-   un <div> texte équivalent, uniquement pendant l'impression. */
-function __preparePrintFields(){
-  const clones=[];
-  const isInModal=el=>el.closest('.modal-overlay');
-  document.querySelectorAll('input[type="text"],input[type="date"],input[type="number"],input[type="tel"],input[type="email"],input:not([type])').forEach(inp=>{
-    if(isInModal(inp))return;
-    const div=document.createElement('div');
-    div.className='__print-value'+(inp.classList.contains('field-input')?' field-input':'')+(inp.classList.contains('ac-input')?' ac-input':'');
-    div.textContent=(inp.value&&inp.value.trim())?inp.value:'\u2014';
-    inp.insertAdjacentElement('afterend',div);
-    inp.classList.add('__print-hide');
-    clones.push({el:inp,div});
+/* ═══════════════════════════════════════════
+   EXPORT PDF (génération directe, sans passer par
+   l'impression du navigateur — plus fiable sur mobile)
+═══════════════════════════════════════════ */
+function __loadImageDims(dataUrl){
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 0, h: 0 });
+    img.src = dataUrl;
   });
-  document.querySelectorAll('select').forEach(sel=>{
-    if(isInModal(sel))return;
-    const div=document.createElement('div');
-    div.className='__print-value'+(sel.classList.contains('field-input')?' field-input':'')+(sel.classList.contains('status-select')?' status-select':'');
-    const opt=sel.options[sel.selectedIndex];
-    div.textContent=opt?opt.textContent:'\u2014';
-    sel.insertAdjacentElement('afterend',div);
-    sel.classList.add('__print-hide');
-    clones.push({el:sel,div});
-  });
-  document.querySelectorAll('textarea').forEach(ta=>{
-    if(isInModal(ta))return;
-    const div=document.createElement('div');
-    div.className='__print-value __print-value-multiline'+(ta.classList.contains('field-input')?' field-input':'')+(ta.classList.contains('ac-textarea')?' ac-textarea':'');
-    div.textContent=(ta.value&&ta.value.trim())?ta.value:'\u2014';
-    ta.insertAdjacentElement('afterend',div);
-    ta.classList.add('__print-hide');
-    clones.push({el:ta,div});
-  });
-  return clones;
-}
-function __restorePrintFields(clones){
-  clones.forEach(({el,div})=>{ el.classList.remove('__print-hide'); div.remove(); });
 }
 
-/* ═══ EXPORT PDF ═══ */
-function exportPDF(){
-  document.querySelectorAll('.tab-page').forEach(p=>p.classList.add('active'));
-  const __printClones = __preparePrintFields();
-  showToast(`🔧 Diagnostic : ${__printClones.length} champs préparés, ${document.querySelectorAll('.tab-page.active').length} pages actives`, 6000);
-  let header=document.getElementById('print-header-el');
-  if(!header){header=document.createElement('div');header.id='print-header-el';header.className='print-header';document.body.appendChild(header);}
-  const proj=g('projet')||'—',tech=g('technicien')||'—',date=g('date')||'—';
-  header.innerHTML=`
-    <h1 style="font-family:Syne,sans-serif;font-size:1.4rem;color:#1a7a8a;margin-bottom:4px">SUIVI DE CHANTIER</h1>
-    <p style="font-size:.82rem;color:#555;margin-bottom:4px">N° : <strong>${buildRapNum()}</strong> &nbsp;|&nbsp; Technicien : <strong>${tech}</strong> &nbsp;|&nbsp; Date : <strong>${date}</strong></p>
-    <p style="font-size:.82rem;color:#555;margin-bottom:14px">Projet : <strong>${proj}</strong></p>
-    <hr style="border:none;border-top:2px solid #1a7a8a;margin-bottom:18px">`;
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        let __cleaned = false;
-        const __cleanup = () => {
-          if (__cleaned) return;
-          __cleaned = true;
-          document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
-          const active=document.querySelector('.tab-btn.active');
-          if(active){const id=active.id.replace('tab-','');document.getElementById('page-'+id)?.classList.add('active');}
-          __restorePrintFields(__printClones);
-          window.removeEventListener('afterprint', __cleanup);
-        };
-        window.addEventListener('afterprint', __cleanup);
-        window.print();
-        setTimeout(__cleanup, 20000);
-      }, 350);
-    });
-  });
+const __STATUT_LABELS = { encours:'En cours', fait:'Fait', bloque:'Bloqué', attente:'En attente' };
+
+async function exportPDF(){
+  showToast('📄 Génération du PDF en cours…', 4000);
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'mm', format:'a4' });
+    const pageW=210, pageH=297, marginX=15, contentW=pageW-marginX*2, bottomLimit=pageH-15;
+    let y=20;
+    const checkBreak=(needed)=>{ if(y+needed>bottomLimit){ doc.addPage(); y=20; } };
+    const sectionTitle=(t)=>{
+      checkBreak(10);
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(26,122,138);
+      doc.text(t, marginX, y); y+=3;
+      doc.setDrawColor(210,210,210); doc.setLineWidth(0.2);
+      doc.line(marginX,y,pageW-marginX,y); y+=5;
+    };
+    const addField=(label,val)=>{
+      const value=(val&&String(val).trim())?String(val):'\u2014';
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(60,60,60);
+      const labelText=label+' :';
+      doc.text(labelText, marginX, y);
+      const labelW=doc.getTextWidth(labelText);
+      const valX=marginX+Math.min(labelW+3,70);
+      const valW=contentW-(valX-marginX);
+      doc.setFont('helvetica','normal'); doc.setTextColor(15,15,15);
+      const lines=doc.splitTextToSize(value, valW);
+      checkBreak(lines.length*4.3+2);
+      doc.setFont('helvetica','bold'); doc.setTextColor(60,60,60);
+      doc.text(labelText, marginX, y);
+      doc.setFont('helvetica','normal'); doc.setTextColor(15,15,15);
+      doc.text(lines, valX, y);
+      y += Math.max(lines.length*4.3,4.3)+1.8;
+    };
+
+    const proj=g('projet')||'\u2014', tech=g('technicien')||'\u2014', date=g('date')||'\u2014';
+    const rapnum=buildRapNum()||'\u2014';
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(26,122,138);
+    doc.text('SUIVI DE CHANTIER', marginX, y); y+=6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(85,85,85);
+    doc.text(`N° : ${rapnum}`, marginX, y); y+=5;
+    doc.text(`Projet : ${proj}   |   Technicien : ${tech}   |   Date : ${date}`, marginX, y); y+=4;
+    doc.setDrawColor(26,122,138); doc.setLineWidth(0.6);
+    doc.line(marginX,y,pageW-marginX,y); y+=8;
+
+    sectionTitle('En-tête');
+    addField('Localisation / GPS', g('localisation'));
+    addField('Nom du client', g('client'));
+    addField('Puissance (kWc)', g('puissance'));
+    addField("Type d'installation", g('type_install'));
+    addField('Type de projet', g('type_projet'));
+    addField('Numéro de semaine', g('semaine'));
+    addField('Observations générales', g('observations'));
+
+    sectionTitle('Actions');
+    if(!actions.length){
+      doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(120,120,120);
+      doc.text('Aucune action enregistrée.', marginX, y); y+=6;
+    }
+    for(const a of actions){
+      checkBreak(14);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(26,122,138);
+      doc.text(`Action — ${a.date||'\u2014'} — ${a.qui||'\u2014'} — ${__STATUT_LABELS[a.statut]||a.statut||'\u2014'}`, marginX, y);
+      y+=5;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(15,15,15);
+      const lines=doc.splitTextToSize(a.quoi&&a.quoi.trim()?a.quoi:'\u2014', contentW);
+      checkBreak(lines.length*4.3+2);
+      doc.text(lines, marginX, y); y+=lines.length*4.3+3;
+
+      for(const dataUrl of (a.photos||[])){
+        const dims = await __loadImageDims(dataUrl);
+        let imgW=90, imgH=60;
+        if(dims.w && dims.h){
+          imgW=90; imgH=imgW*(dims.h/dims.w);
+          if(imgH>75){ imgH=75; imgW=imgH*(dims.w/dims.h); }
+        }
+        checkBreak(imgH+4);
+        try {
+          const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+          doc.addImage(dataUrl, fmt, marginX, y, imgW, imgH);
+          y += imgH+3;
+        } catch(e){
+          doc.setFont('helvetica','italic'); doc.setFontSize(8.5);
+          doc.text('(photo non intégrée)', marginX, y); y+=5;
+        }
+      }
+      y+=3;
+    }
+
+    const filename = `SuiviChantier_${rapnum.replace(/[^a-zA-Z0-9-]/g,'_')}.pdf`;
+    doc.save(filename);
+    showToast('✔ PDF généré : '+filename, 3500);
+  } catch(e){
+    console.error(e);
+    showToast('\u274c Erreur lors de la génération du PDF : '+e.message, 6000);
+  }
 }
 
 /* ═══ RESET ═══ */
