@@ -69,6 +69,10 @@ select.field-input option{background:var(--card)}
 .participant-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px}
 .participant-card label{font-size:.72rem;color:var(--muted);display:block;margin-bottom:4px;font-weight:500}
 .participant-card textarea{width:100%;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;resize:none;outline:none;min-height:60px;line-height:1.5}
+.sig-label{font-size:.68rem;color:var(--muted);margin:6px 0 3px;display:flex;align-items:center;justify-content:space-between}
+.sig-clear{background:transparent;border:none;color:var(--accent2);font-size:.68rem;cursor:pointer;text-decoration:underline;padding:0}
+.sig-canvas-wrap{background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;touch-action:none}
+.sig-canvas{width:100%;height:70px;display:block;cursor:crosshair}
 
 .actions-table{width:100%;border-collapse:collapse}
 .actions-table th{text-align:left;font-size:.78rem;color:var(--muted);font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px}
@@ -513,9 +517,58 @@ function buildParticipants(){
   for(let i=1;i<=5;i++){
     const d=document.createElement('div');
     d.className='participant-card';
-    d.innerHTML=`<label>Participant ${i}</label><textarea placeholder="Société&#10;Nom Prénom" oninput="s('participant_${i}',this.value)">${esc(g('participant_'+i,i===1?'NEOS\nKhalil NEFFATI':''))}</textarea>`;
+    d.innerHTML=`<label>Participant ${i}</label><textarea placeholder="Société&#10;Nom Prénom" oninput="s('participant_${i}',this.value)">${esc(g('participant_'+i,i===1?'NEOS\nKhalil NEFFATI':''))}</textarea>
+      <div class="sig-label"><span>Signature</span><button class="sig-clear" onclick="clearSignature(${i})">Effacer</button></div>
+      <div class="sig-canvas-wrap"><canvas class="sig-canvas" id="sig-${i}"></canvas></div>`;
     grid.appendChild(d);
   }
+  setTimeout(()=>{ for(let i=1;i<=5;i++) initSignaturePad(i); }, 0);
+}
+
+/* ═══ SIGNATURE PAD ═══ */
+const __sigState = {};
+function initSignaturePad(i){
+  const canvas = document.getElementById('sig-'+i);
+  if(!canvas) return;
+  const ratio = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.max(rect.width,1) * ratio;
+  canvas.height = Math.max(rect.height,1) * ratio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(ratio, ratio);
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#111';
+  __sigState[i] = { drawing:false, ctx, canvas };
+
+  const saved = g('signature_'+i);
+  if(saved){
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+    img.src = saved;
+  }
+
+  const getPos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const point = e.touches ? e.touches[0] : e;
+    return { x: point.clientX - r.left, y: point.clientY - r.top };
+  };
+  const start = (e) => { e.preventDefault(); const st=__sigState[i]; st.drawing=true; const p=getPos(e); st.ctx.beginPath(); st.ctx.moveTo(p.x,p.y); };
+  const move = (e) => { const st=__sigState[i]; if(!st.drawing) return; e.preventDefault(); const p=getPos(e); st.ctx.lineTo(p.x,p.y); st.ctx.stroke(); };
+  const end = () => { const st=__sigState[i]; if(!st.drawing) return; st.drawing=false; s('signature_'+i, canvas.toDataURL('image/png')); };
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, {passive:false});
+  canvas.addEventListener('touchmove', move, {passive:false});
+  canvas.addEventListener('touchend', end);
+}
+function clearSignature(i){
+  const st = __sigState[i];
+  if(!st) return;
+  st.ctx.clearRect(0,0,st.canvas.width,st.canvas.height);
+  s('signature_'+i, '');
 }
 
 /* ═══ ACTIONS ═══ */
@@ -783,7 +836,21 @@ async function exportPDF(){
     sectionTitle('Participants présents');
     for(let i=1;i<=5;i++){
       const p=g('participant_'+i);
-      if(p && p.trim()) addField('Participant '+i, p.replace(/\n/g,' — '));
+      const sig=g('signature_'+i);
+      if(!(p && p.trim()) && !sig) continue;
+      addField('Participant '+i, p.replace(/\n/g,' — '));
+      if(sig){
+        const dims = await __loadImageDims(sig);
+        let imgW=45, imgH=15;
+        if(dims.w && dims.h){ imgH = imgW * (dims.h/dims.w); if(imgH>20){ imgH=20; imgW=imgH*(dims.w/dims.h); } }
+        checkBreak(imgH+6);
+        doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
+        doc.text('Signature :', marginX, y); y+=3;
+        try {
+          doc.addImage(sig, 'PNG', marginX, y, imgW, imgH);
+          y += imgH+4;
+        } catch(e){ y+=4; }
+      }
     }
 
     sectionTitle('Points de la réunion');
