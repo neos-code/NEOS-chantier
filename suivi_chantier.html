@@ -285,8 +285,39 @@ function __dateFromISO(iso){
 function sj(k,v){try{localStorage.setItem(PFX+k,JSON.stringify(v))}catch(e){}}
 function gj(k,def){try{const v=localStorage.getItem(PFX+k);return v?JSON.parse(v):def}catch(e){return def}}
 
-let actions=[]; // [{id,date,qui,quoi,statut,photos:[dataUrl]}]
-let nextId=1;
+/* ═══ TABLEAU D'ACTIONS PARTAGÉ (source unique pour tout le projet) ═══
+   Les champs qui/date/action/statut vivent dans neos_project_actions et
+   sont donc partagés avec les autres documents du projet. Les photos,
+   elles, restent propres à CE document (spécifiques à cette visite). */
+function getAllProjectActionsRaw(){
+  try{ return JSON.parse(localStorage.getItem('neos_project_actions')||'[]'); }catch(e){ return []; }
+}
+function saveAllProjectActionsRaw(all){
+  try{ localStorage.setItem('neos_project_actions', JSON.stringify(all)); }catch(e){}
+}
+function getProjectActions(){
+  if(!PROJECT_ID) return [];
+  return getAllProjectActionsRaw().filter(a=>a.projectId===PROJECT_ID);
+}
+function upsertProjectAction(patch){
+  const all=getAllProjectActionsRaw();
+  const idx=all.findIndex(a=>a.id===patch.id);
+  if(idx>=0){ all[idx]={...all[idx],...patch,updatedAt:Date.now()}; }
+  else{ all.push({ projectId:PROJECT_ID, statut:'À faire', sourceDocId:DOC_ID, sourceLabel:DOC_LABEL||'Suivi de chantier', createdAt:Date.now(), updatedAt:Date.now(), ...patch }); }
+  saveAllProjectActionsRaw(all);
+}
+function deleteProjectActionById(id){
+  saveAllProjectActionsRaw(getAllProjectActionsRaw().filter(a=>a.id!==id));
+}
+function newActionId(){ return 'act_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+const STATUT_TO_SHARED = { attente:'À faire', encours:'En cours', bloque:'Bloqué', fait:'Fait' };
+const STATUT_FROM_SHARED = { 'À faire':'attente', 'En cours':'encours', 'Bloqué':'bloque', 'Fait':'fait' };
+
+function getLocalPhotos(actionId){ return gj('action_photos_'+actionId, []); }
+function saveLocalPhotos(actionId, photos){ sj('action_photos_'+actionId, photos); }
+
+let actions=[]; // cache de rendu, reconstruit depuis neos_project_actions
 
 /* ═══ RAP NUM ═══ */
 function buildRapNum(){
@@ -318,10 +349,22 @@ function updateProgress(){
 }
 
 /* ═══ ACTIONS ═══ */
+function loadActions(){
+  const shared = getProjectActions().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  actions = shared.map(a=>({
+    id: a.id,
+    date: a.date||'',
+    qui: a.qui||'',
+    quoi: a.action||'',
+    statut: STATUT_FROM_SHARED[a.statut] || 'attente',
+    photos: getLocalPhotos(a.id)
+  }));
+}
+
 function addAction(){
-  const id=nextId++;
-  actions.push({id,date:'',qui:'',quoi:'',statut:'encours',photos:[]});
-  saveActions();
+  const id=newActionId();
+  upsertProjectAction({id, qui:'', date:'', action:'', statut:'À faire'});
+  loadActions();
   renderActions();
   showToast('✔ Nouvelle action ajoutée');
   // scroll to bottom
@@ -333,8 +376,9 @@ function addAction(){
 }
 
 function delAction(id){
-  actions=actions.filter(a=>a.id!==id);
-  saveActions();
+  deleteProjectActionById(id);
+  localStorage.removeItem(PFX+'action_photos_'+id);
+  loadActions();
   renderActions();
 }
 
@@ -342,8 +386,17 @@ function updateAction(id,field,val){
   const a=actions.find(a=>a.id===id);
   if(!a)return;
   a[field]=val;
-  saveActions();
+  if(field==='photos'){
+    saveLocalPhotos(id,val);
+  } else if(field==='quoi'){
+    upsertProjectAction({id, action:val});
+  } else if(field==='statut'){
+    upsertProjectAction({id, statut: STATUT_TO_SHARED[val]||'À faire'});
+  } else {
+    upsertProjectAction({id, [field]:val});
+  }
   if(field==='statut') renderStatutSelect(id,val);
+  updateActionsCount();
 }
 
 function renderStatutSelect(id,val){
@@ -352,8 +405,7 @@ function renderStatutSelect(id,val){
   sel.className='status-select status-'+val;
 }
 
-function saveActions(){
-  sj('actions',actions);
+function updateActionsCount(){
   const ct=document.getElementById('actions-count');
   if(ct)ct.textContent=actions.length?`(${actions.length})`:'';
 }
@@ -363,7 +415,7 @@ function renderActions(){
   if(!list)return;
   if(actions.length===0){
     list.innerHTML=`<div class="empty-state"><div class="es-icon">📋</div><p>Aucune action pour l'instant.<br>Appuyez sur <strong>+ Nouvelle action</strong> pour commencer.</p></div>`;
-    saveActions(); return;
+    updateActionsCount(); return;
   }
   list.innerHTML='';
   actions.forEach((a,idx)=>{
@@ -374,33 +426,33 @@ function renderActions(){
       <div class="action-card-top">
         <div>
           <div class="ac-label">Date</div>
-          <input class="ac-input" type="date" id="ac-date-${a.id}" value="${__dateToISO(a.date)}" onchange="updateAction(${a.id},'date',__dateFromISO(this.value))">
+          <input class="ac-input" type="date" id="ac-date-${a.id}" value="${__dateToISO(a.date)}" onchange="updateAction('${a.id}','date',__dateFromISO(this.value))">
         </div>
         <div>
           <div class="ac-label">Responsable</div>
-          <input class="ac-input" id="ac-qui-${a.id}" value="${esc(a.qui)}" placeholder="Nom" oninput="updateAction(${a.id},'qui',this.value)">
+          <input class="ac-input" id="ac-qui-${a.id}" value="${esc(a.qui)}" placeholder="Nom" oninput="updateAction('${a.id}','qui',this.value)">
         </div>
         <div class="quoi-col">
           <div class="ac-label" style="display:flex;align-items:center;justify-content:space-between">
             <span>Action</span>
-            <select class="status-select status-${a.statut}" id="sel-${a.id}" onchange="updateAction(${a.id},'statut',this.value)">
+            <select class="status-select status-${a.statut}" id="sel-${a.id}" onchange="updateAction('${a.id}','statut',this.value)">
               <option value="encours" ${a.statut==='encours'?'selected':''}>En cours</option>
               <option value="fait"    ${a.statut==='fait'   ?'selected':''}>✔ Fait</option>
               <option value="bloque"  ${a.statut==='bloque' ?'selected':''}>⚠ Bloqué</option>
               <option value="attente" ${a.statut==='attente'?'selected':''}>⏳ En attente</option>
             </select>
           </div>
-          <textarea class="ac-textarea" id="ac-quoi-${a.id}" placeholder="Description de l'action..." oninput="updateAction(${a.id},'quoi',this.value)">${esc(a.quoi)}</textarea>
+          <textarea class="ac-textarea" id="ac-quoi-${a.id}" placeholder="Description de l'action..." oninput="updateAction('${a.id}','quoi',this.value)">${esc(a.quoi)}</textarea>
         </div>
-        <button class="btn-del-card" onclick="delAction(${a.id})" title="Supprimer">✕</button>
+        <button class="btn-del-card" onclick="delAction('${a.id}')" title="Supprimer">✕</button>
       </div>
       <div class="action-card-body">
         <div class="photos-label">Photos</div>
         <div class="photos-row" id="photos-row-${a.id}">
           ${renderThumbs(a)}
           <div class="photo-add-btns">
-            <input type="file" accept="image/*" capture="environment" class="photo-file-hidden" id="pcam-${a.id}" multiple onchange="handlePhotos(${a.id},this)">
-            <input type="file" accept="image/*" class="photo-file-hidden" id="pgal-${a.id}" multiple onchange="handlePhotos(${a.id},this)">
+            <input type="file" accept="image/*" capture="environment" class="photo-file-hidden" id="pcam-${a.id}" multiple onchange="handlePhotos('${a.id}',this)">
+            <input type="file" accept="image/*" class="photo-file-hidden" id="pgal-${a.id}" multiple onchange="handlePhotos('${a.id}',this)">
             <button class="btn-photo-cam" onclick="document.getElementById('pcam-${a.id}').click()">📷 Photo</button>
             <button class="btn-photo-gal" onclick="document.getElementById('pgal-${a.id}').click()">🖼 Galerie</button>
           </div>
@@ -408,14 +460,14 @@ function renderActions(){
       </div>`;
     list.appendChild(card);
   });
-  saveActions();
+  updateActionsCount();
 }
 
 function renderThumbs(a){
   return (a.photos||[]).map((url,i)=>`
     <div class="photo-thumb">
       <img src="${url}" alt="">
-      <button class="photo-thumb-del" onclick="delPhoto(${a.id},${i})">✕</button>
+      <button class="photo-thumb-del" onclick="delPhoto('${a.id}',${i})">✕</button>
     </div>`).join('');
 }
 
@@ -443,7 +495,7 @@ function handlePhotos(id,input){
     reader.onload=e=>{
       a.photos.push(e.target.result);
       loaded++;
-      if(loaded===files.length){saveActions();refreshThumbs(id);showToast(`✔ ${files.length} photo(s) ajoutée(s)`);}
+      if(loaded===files.length){saveLocalPhotos(id,a.photos);refreshThumbs(id);showToast(`✔ ${files.length} photo(s) ajoutée(s)`);}
     };
     reader.readAsDataURL(file);
   });
@@ -454,7 +506,7 @@ function delPhoto(id,idx){
   const a=actions.find(a=>a.id===id);
   if(!a||!a.photos)return;
   a.photos.splice(idx,1);
-  saveActions();
+  saveLocalPhotos(id,a.photos);
   refreshThumbs(id);
 }
 
@@ -576,7 +628,7 @@ function doReset(){
   const n=parseInt(localStorage.getItem(PFX+'counter')||'0')+1;
   localStorage.setItem(PFX+'counter',String(n));
   Object.keys(localStorage).filter(k=>k.startsWith(PFX)&&k!==PFX+'counter').forEach(k=>localStorage.removeItem(k));
-  actions=[];nextId=1;
+  loadActions();
   closeModal();
   loadFields();
   renderActions();
@@ -641,12 +693,7 @@ function __seedFromProject(){
   loadFields();
   updateRapNum();
   updateProgress();
-  // Load actions
-  const saved=gj('actions',[]);
-  if(saved.length){
-    actions=saved;
-    nextId=Math.max(...saved.map(a=>a.id||0))+1;
-  }
+  loadActions();
   renderActions();
   showToast('📋 Suivi chargé — données sauvegardées automatiquement');
 })();

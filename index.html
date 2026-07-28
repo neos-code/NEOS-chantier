@@ -72,6 +72,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .action-status-select{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.76rem;padding:5px 8px;outline:none}
 .action-status-select.action-status-done{border-color:var(--ok);color:var(--ok)}
 .action-status-select.action-status-progress{border-color:var(--accent2);color:var(--accent2)}
+.action-status-select.action-status-blocked{border-color:var(--danger);color:var(--danger)}
 .action-status-select.action-status-todo{border-color:var(--muted);color:var(--muted)}
 
 /* ═ MODAL ═ */
@@ -308,8 +309,9 @@ function renderProjectActionsTable(pid){
                 <td>${esc(a.action)||'—'}</td>
                 <td>
                   <select class="action-status-select action-status-${statusClass(a.statut)}" onchange="updateProjectActionStatus('${pid}','${a.id}',this.value);render()">
-                    <option ${a.statut==='À faire'?'selected':''}>À faire</option>
+                    <option ${(!a.statut||a.statut==='À faire')?'selected':''}>À faire</option>
                     <option ${a.statut==='En cours'?'selected':''}>En cours</option>
+                    <option ${a.statut==='Bloqué'?'selected':''}>Bloqué</option>
                     <option ${a.statut==='Fait'?'selected':''}>Fait</option>
                   </select>
                 </td>
@@ -317,12 +319,13 @@ function renderProjectActionsTable(pid){
               </tr>`).join('')}
           </tbody>
         </table>
-      </div>` : `<div class="doc-empty">Aucune action pour l'instant — elles apparaîtront ici automatiquement dès qu'un rapport d'ouverture ou de fermeture en contiendra.</div>`}
+      </div>` : `<div class="doc-empty">Aucune action pour l'instant — elles apparaîtront ici automatiquement dès qu'un document en contiendra.</div>`}
     </div>`;
 }
 function statusClass(statut){
   if(statut==='Fait') return 'done';
   if(statut==='En cours') return 'progress';
+  if(statut==='Bloqué') return 'blocked';
   return 'todo';
 }
 
@@ -430,33 +433,20 @@ function createDocument(){
   const docs = getDocuments();
   docs.push(doc);
   saveDocuments(docs);
-  seedActionsIntoDocument(doc);
   closeModal('modal-doc');
   openDocument(doc.id);
 }
 
-/* ═══ TABLEAU D'ACTIONS PROJET ═══ */
+/* ═══ TABLEAU D'ACTIONS PROJET ═══
+   Source unique partagée avec tous les documents (ouverture, fermeture,
+   suivi) : ils lisent et écrivent directement ici, aucune copie n'est
+   faite lors de la création d'un nouveau document. */
 function getProjectActions(projectId){
   try{ return JSON.parse(localStorage.getItem('neos_project_actions')||'[]').filter(a=>a.projectId===projectId); }
   catch(e){ return []; }
 }
 function saveProjectActions(all){
   localStorage.setItem('neos_project_actions', JSON.stringify(all));
-}
-function seedActionsIntoDocument(doc){
-  if(doc.type !== 'fermeture' && doc.type !== 'suivi') return;
-  const projectActions = getProjectActions(doc.projectId);
-  if(!projectActions.length) return;
-  const pfx = 'doc_'+doc.id+'_';
-  if(doc.type === 'fermeture'){
-    const rows = projectActions.map(a=>({ qui:a.qui, date:a.date, action:a.action }));
-    localStorage.setItem(pfx+'action_rows', JSON.stringify(rows));
-  } else if(doc.type === 'suivi'){
-    const rows = projectActions.map((a,i)=>({
-      id: Date.now()+i, date:a.date, qui:a.qui, quoi:a.action, statut:'attente', photos:[]
-    }));
-    localStorage.setItem(pfx+'actions', JSON.stringify(rows));
-  }
 }
 function updateProjectActionStatus(projectId, actionId, statut){
   const all = JSON.parse(localStorage.getItem('neos_project_actions')||'[]');
@@ -497,7 +487,9 @@ function doDeleteDocument(){
   const id = pendingDeleteDocId;
   Object.keys(localStorage).filter(k=>k.startsWith('doc_'+id+'_')).forEach(k=>localStorage.removeItem(k));
   saveDocuments(getDocuments().filter(d=>d.id!==id));
-  saveProjectActions(JSON.parse(localStorage.getItem('neos_project_actions')||'[]').filter(a=>a.sourceDocId!==id));
+  // Ne retire que les actions AUTOMATIQUES (liées à une réserve) de ce document précis —
+  // les actions manuelles appartiennent au projet et restent visibles ailleurs.
+  saveProjectActions(JSON.parse(localStorage.getItem('neos_project_actions')||'[]').filter(a=>!(a.sourceDocId===id && a.linkedKey)));
   closeModal('modal-confirm');
   showToast('✔ Document supprimé');
   render();

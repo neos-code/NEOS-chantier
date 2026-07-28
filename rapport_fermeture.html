@@ -210,6 +210,7 @@ select.field-input option { background: var(--card); }
   transition: opacity .15s; opacity: .5;
 }
 .btn-del-row:hover { opacity: 1; }
+.action-status-select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.76rem;padding:6px 8px;outline:none}
 
 /* ═══ RESERVE ACTION INLINE ═══ */
 .reserve-action-block {
@@ -534,35 +535,28 @@ function __dateFromISO(iso){
 function sj(id, val) { try { localStorage.setItem(PFX+id, JSON.stringify(val)); } catch(e){} }
 function gj(id, def) { try { const v=localStorage.getItem(PFX+id); return v?JSON.parse(v):def; } catch(e){ return def; } }
 
-/* ═══ SYNCHRONISATION DU TABLEAU D'ACTIONS PROJET ═══ */
-function saveActionRows(){
-  sj('action_rows',actionRows);
-  syncActionsToProject();
+/* ═══ TABLEAU D'ACTIONS PARTAGÉ (source unique pour tout le projet) ═══ */
+function getAllProjectActionsRaw(){
+  try{ return JSON.parse(localStorage.getItem('neos_project_actions')||'[]'); }catch(e){ return []; }
 }
-function syncActionsToProject(){
-  if(!PROJECT_ID) return;
-  let all=[];
-  try{ all=JSON.parse(localStorage.getItem('neos_project_actions')||'[]'); }catch(e){}
-  all=all.filter(a=>a.sourceDocId!==DOC_ID);
-  actionRows.forEach((row,i)=>{
-    if(!(row.qui||row.date||row.action)) return;
-    const existing = (JSON.parse(localStorage.getItem('neos_project_actions')||'[]'))
-      .find(a=>a.sourceDocId===DOC_ID && a.rowIndex===i);
-    all.push({
-      id: DOC_ID+'_'+i,
-      projectId: PROJECT_ID,
-      qui: row.qui||'',
-      date: row.date||'',
-      action: row.action||'',
-      statut: existing?.statut || 'À faire',
-      sourceDocId: DOC_ID,
-      sourceLabel: DOC_LABEL || 'Fermeture de chantier',
-      rowIndex: i,
-      updatedAt: Date.now()
-    });
-  });
+function saveAllProjectActionsRaw(all){
   try{ localStorage.setItem('neos_project_actions', JSON.stringify(all)); }catch(e){}
 }
+function getProjectActions(){
+  if(!PROJECT_ID) return [];
+  return getAllProjectActionsRaw().filter(a=>a.projectId===PROJECT_ID);
+}
+function upsertProjectAction(patch){
+  const all=getAllProjectActionsRaw();
+  const idx=all.findIndex(a=>a.id===patch.id);
+  if(idx>=0){ all[idx]={...all[idx],...patch,updatedAt:Date.now()}; }
+  else{ all.push({ projectId:PROJECT_ID, statut:'À faire', sourceDocId:DOC_ID, sourceLabel:DOC_LABEL||'Fermeture de chantier', createdAt:Date.now(), updatedAt:Date.now(), ...patch }); }
+  saveAllProjectActionsRaw(all);
+}
+function deleteProjectActionById(id){
+  saveAllProjectActionsRaw(getAllProjectActionsRaw().filter(a=>a.id!==id));
+}
+function newActionId(){ return 'act_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* ═══ RAPPORT NUM ═══ */
 function buildRapNum() {
@@ -718,7 +712,7 @@ function buildContent() {
     <div class="section-card-header"><h3>✅ Actions à mener</h3></div>
     <div class="section-card-body">
       <table class="actions-table">
-        <thead><tr><th style="width:200px">Qui</th><th style="width:140px">Date</th><th>Action(s)</th><th style="width:40px"></th></tr></thead>
+        <thead><tr><th style="width:160px">Qui</th><th style="width:130px">Date</th><th>Action(s)</th><th style="width:110px">Statut</th><th style="width:40px"></th></tr></thead>
         <tbody id="actions-tbody"></tbody>
       </table>
       <button class="btn-add-row" onclick="addActionRow()">＋ Ajouter une ligne</button>
@@ -828,31 +822,32 @@ const RETOUR_ITEMS = [
 ];
 
 function syncReserveActions() {
-  // Collect all actions that come from reserves
-  const reserveActions = RETOUR_ITEMS
-    .filter(item => g('retour_'+item.id) === 'reserve')
-    .map(item => ({
-      _reserveId: item.id,
-      qui:    g('retour_act_qui_'+item.id),
-      date:   g('retour_act_date_'+item.id),
+  RETOUR_ITEMS.forEach(item => {
+    const isReserve = g('retour_'+item.id) === 'reserve';
+    const linkedKey = 'retour_'+item.id;
+    if (!isReserve) {
+      const existing = getProjectActions().find(a=>a.linkedKey===linkedKey);
+      if (existing) deleteProjectActionById(existing.id);
+      return;
+    }
+    upsertProjectAction({
+      id: linkedKey,
+      qui: g('retour_act_qui_'+item.id),
+      date: g('retour_act_date_'+item.id),
       action: g('retour_act_action_'+item.id) || '[Réserve : '+item.label+']',
-    }));
-
-  // Load current manual rows (those without _reserveId)
-  const manualRows = actionRows.filter(r => !r._reserveId);
-
-  // Merge: reserve actions first, then manual
-  actionRows = [...reserveActions, ...manualRows];
-  saveActionRows();
-  renderActions();
+      linkedKey, linkedLabel: item.label,
+      sourceDocId: DOC_ID, sourceLabel: DOC_LABEL||'Fermeture de chantier'
+    });
+  });
+  refreshActions();
 }
 
 /* ═══ ACTIONS TABLE ═══ */
 function buildActions() {
-  const all = gj('action_rows', []);
-  // On restore, keep manual rows only; reserve rows will be rebuilt by syncReserveActions
-  actionRows = all.filter(r => !r._reserveId);
-  if (actionRows.length === 0) actionRows = [{ qui:'', date:'', action:'' }];
+  syncReserveActions();
+}
+function refreshActions(){
+  actionRows = getProjectActions().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   renderActions();
 }
 
@@ -860,38 +855,46 @@ function renderActions() {
   const tbody = document.getElementById('actions-tbody');
   if (!tbody) return;
   tbody.innerHTML = '';
-  actionRows.forEach((row, i) => {
+  if (!actionRows.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;font-size:.8rem">Aucune action pour l'instant.</td></tr>`;
+    return;
+  }
+  actionRows.forEach(row => {
     const tr = document.createElement('tr');
-    const isReserve = !!row._reserveId;
-    if (isReserve) {
-      tr.style.cssText = 'background:rgba(248,113,113,.06);';
-    }
+    const isReserve = !!row.linkedKey;
+    if (isReserve) tr.style.cssText = 'background:rgba(248,113,113,.06);';
     const badge = isReserve
-      ? `<span style="font-size:.65rem;color:var(--danger);font-family:'DM Mono',monospace;margin-right:6px;opacity:.8">⚠ ${row._reserveId}</span>`
+      ? `<span style="font-size:.65rem;color:var(--danger);font-family:'DM Mono',monospace;margin-right:6px;opacity:.8">⚠ ${esc(row.linkedLabel)}</span>`
       : '';
     tr.innerHTML = `
-      <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].qui=this.value;saveActionRows()"></td>
-      <td><input type="date" value="${__dateToISO(row.date)}" ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} onchange="actionRows[${i}].date=__dateFromISO(this.value);saveActionRows()"></td>
-      <td><div style="display:flex;align-items:center">${badge}<input value="${esc(row.action)}" placeholder="Description de l'action..." ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].action=this.value;saveActionRows()"></div></td>
-      <td>${isReserve ? '<span style="font-size:.7rem;color:var(--muted);padding:4px 8px" title="Gérer depuis la section Ouvrage/Électrique">🔒</span>' : `<button class="btn-del-row" onclick="delActionRow(${i})">✕</button>`}</td>`;
+      <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} oninput="updateSharedAction('${row.id}','qui',this.value)"></td>
+      <td><input type="date" value="${__dateToISO(row.date)}" ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} onchange="updateSharedAction('${row.id}','date',__dateFromISO(this.value))"></td>
+      <td><div style="display:flex;align-items:center">${badge}<input value="${esc(row.action)}" placeholder="Description de l'action..." ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} oninput="updateSharedAction('${row.id}','action',this.value)"></div></td>
+      <td>
+        <select class="action-status-select" onchange="updateSharedAction('${row.id}','statut',this.value)">
+          <option ${(!row.statut||row.statut==='À faire')?'selected':''}>À faire</option>
+          <option ${row.statut==='En cours'?'selected':''}>En cours</option>
+          <option ${row.statut==='Bloqué'?'selected':''}>Bloqué</option>
+          <option ${row.statut==='Fait'?'selected':''}>Fait</option>
+        </select>
+      </td>
+      <td>${isReserve ? '<span style="font-size:.7rem;color:var(--muted);padding:4px 8px" title="Gérer depuis la section Ouvrage/Électrique">🔒</span>' : `<button class="btn-del-row" onclick="deleteManualAction('${row.id}')">✕</button>`}</td>`;
     tbody.appendChild(tr);
   });
 }
-
-function addActionRow() {
-  actionRows.push({ qui:'', date:'', action:'' });
-  saveActionRows();
-  renderActions();
+function updateSharedAction(id,field,val){
+  upsertProjectAction({id,[field]:val});
+  actionRows=getProjectActions();
 }
 
-function delActionRow(i) {
-  const row = actionRows[i];
-  if (!row || row._reserveId) return; // can't delete reserve-linked rows
-  const manualRows = actionRows.filter(r => !r._reserveId);
-  if (manualRows.length <= 1) return;
-  actionRows.splice(i, 1);
-  saveActionRows();
-  renderActions();
+function addActionRow() {
+  upsertProjectAction({id:newActionId(),qui:'',date:'',action:'',statut:'À faire'});
+  refreshActions();
+}
+
+function deleteManualAction(id) {
+  deleteProjectActionById(id);
+  refreshActions();
 }
 
 /* ═══ PHOTOS MULTI ═══ */
@@ -1079,9 +1082,9 @@ async function exportPDF() {
     ]);
 
     sectionTitle('Actions à mener');
-    (actionRows||[]).forEach((row,i)=>{
+    getProjectActions().forEach((row,i)=>{
       if(row.qui || row.date || row.action){
-        addField(`Action ${i+1}`, `${row.action||'\u2014'} (Responsable: ${row.qui||'\u2014'}, Date: ${row.date||'\u2014'})`);
+        addField(`Action ${i+1}`, `${row.action||'\u2014'} (Responsable: ${row.qui||'\u2014'}, Date: ${row.date||'\u2014'}, Statut: ${row.statut||'À faire'})`);
       }
     });
 

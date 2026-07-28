@@ -82,6 +82,7 @@ select.field-input option{background:var(--card)}
 .btn-add-row{margin-top:10px;padding:7px 16px;background:transparent;border:1px dashed var(--border);border-radius:7px;color:var(--muted);font-size:.8rem;cursor:pointer;transition:all .15s;width:100%}
 .btn-add-row:hover{border-color:var(--accent2);color:var(--accent2)}
 .btn-del-row{background:transparent;border:none;color:var(--danger);font-size:1rem;cursor:pointer;padding:4px 8px;border-radius:4px;transition:opacity .15s;opacity:.5}
+.action-status-select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.76rem;padding:6px 8px;outline:none}
 .btn-del-row:hover{opacity:1}
 
 .photo-section-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:14px}
@@ -317,37 +318,32 @@ function __dateFromISO(iso){
 function sj(id,val){try{localStorage.setItem(PFX+id,JSON.stringify(val))}catch(e){}}
 function gj(id,def){try{const v=localStorage.getItem(PFX+id);return v?JSON.parse(v):def}catch(e){return def}}
 
-/* ═══ SYNCHRONISATION DU TABLEAU D'ACTIONS PROJET ═══
-   Chaque modification des actions de CE document met à jour le tableau
-   d'actions global du projet, visible depuis le tableau de bord. */
-function saveActionRows(){
-  sj('action_rows',actionRows);
-  syncActionsToProject();
+/* ═══ TABLEAU D'ACTIONS PARTAGÉ (source unique pour tout le projet) ═══
+   Les actions ne sont plus dupliquées par document : elles vivent dans
+   neos_project_actions et chaque document les lit/écrit en direct.
+   Modifier une action ici la modifie partout (tableau de bord, autres
+   documents du même projet). */
+function getAllProjectActionsRaw(){
+  try{ return JSON.parse(localStorage.getItem('neos_project_actions')||'[]'); }catch(e){ return []; }
 }
-function syncActionsToProject(){
-  if(!PROJECT_ID) return;
-  let all=[];
-  try{ all=JSON.parse(localStorage.getItem('neos_project_actions')||'[]'); }catch(e){}
-  all=all.filter(a=>a.sourceDocId!==DOC_ID);
-  actionRows.forEach((row,i)=>{
-    if(!(row.qui||row.date||row.action)) return;
-    const existing = (JSON.parse(localStorage.getItem('neos_project_actions')||'[]'))
-      .find(a=>a.sourceDocId===DOC_ID && a.rowIndex===i);
-    all.push({
-      id: DOC_ID+'_'+i,
-      projectId: PROJECT_ID,
-      qui: row.qui||'',
-      date: row.date||'',
-      action: row.action||'',
-      statut: existing?.statut || 'À faire',
-      sourceDocId: DOC_ID,
-      sourceLabel: DOC_LABEL || 'Ouverture de chantier',
-      rowIndex: i,
-      updatedAt: Date.now()
-    });
-  });
+function saveAllProjectActionsRaw(all){
   try{ localStorage.setItem('neos_project_actions', JSON.stringify(all)); }catch(e){}
 }
+function getProjectActions(){
+  if(!PROJECT_ID) return [];
+  return getAllProjectActionsRaw().filter(a=>a.projectId===PROJECT_ID);
+}
+function upsertProjectAction(patch){
+  const all=getAllProjectActionsRaw();
+  const idx=all.findIndex(a=>a.id===patch.id);
+  if(idx>=0){ all[idx]={...all[idx],...patch,updatedAt:Date.now()}; }
+  else{ all.push({ projectId:PROJECT_ID, statut:'À faire', sourceDocId:DOC_ID, sourceLabel:DOC_LABEL||'Ouverture de chantier', createdAt:Date.now(), updatedAt:Date.now(), ...patch }); }
+  saveAllProjectActionsRaw(all);
+}
+function deleteProjectActionById(id){
+  saveAllProjectActionsRaw(getAllProjectActionsRaw().filter(a=>a.id!==id));
+}
+function newActionId(){ return 'act_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* ═══ RAPPORT NUM ═══ */
 function buildRapNum(){
@@ -469,7 +465,7 @@ function buildContent(){
     <div class="section-card-header"><h3>✅ Actions à mener</h3></div>
     <div class="section-card-body">
       <table class="actions-table">
-        <thead><tr><th style="width:200px">Qui</th><th style="width:140px">Date</th><th>Action(s)</th><th style="width:40px"></th></tr></thead>
+        <thead><tr><th style="width:160px">Qui</th><th style="width:130px">Date</th><th>Action(s)</th><th style="width:110px">Statut</th><th style="width:40px"></th></tr></thead>
         <tbody id="actions-tbody"></tbody>
       </table>
       <button class="btn-add-row" onclick="addActionRow()">＋ Ajouter une ligne</button>
@@ -605,29 +601,55 @@ function clearSignature(i){
 
 /* ═══ ACTIONS ═══ */
 function buildActions(){
-  actionRows=gj('action_rows',[{qui:'',date:'',action:''}]);
-  syncPIToActions(); // restore PI rows from saved state
+  syncPIToActions();
+  refreshActions();
+}
+function refreshActions(){
+  actionRows=getProjectActions().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  renderActions();
 }
 function renderActions(){
   const tbody=document.getElementById('actions-tbody');
   if(!tbody)return; tbody.innerHTML='';
-  actionRows.forEach((row,i)=>{
+  if(!actionRows.length){
+    tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;font-size:.8rem">Aucune action pour l'instant.</td></tr>`;
+    return;
+  }
+  actionRows.forEach(row=>{
+    const isPI=!!row.linkedKey;
     const tr=document.createElement('tr');
-    const isPI=!!row._pi; // rows injected from points importants
     tr.style.background=isPI?'rgba(248,113,113,.04)':'';
     tr.innerHTML=`
-      <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].qui=this.value;saveActionRows()"></td>
-      <td><input type="date" value="${__dateToISO(row.date)}" ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} onchange="actionRows[${i}].date=__dateFromISO(this.value);saveActionRows()"></td>
+      <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} oninput="updateSharedAction('${row.id}','qui',this.value)"></td>
+      <td><input type="date" value="${__dateToISO(row.date)}" ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} onchange="updateSharedAction('${row.id}','date',__dateFromISO(this.value))"></td>
       <td>
-        ${isPI?`<span style="font-size:.7rem;color:var(--danger);font-family:'DM Mono',monospace;margin-right:6px;vertical-align:middle">⚠ ${esc(row._pi)}</span>`:''}
-        <input value="${esc(row.action)}" placeholder="Description de l'action..." ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].action=this.value;saveActionRows()">
+        ${isPI?`<span style="font-size:.7rem;color:var(--danger);font-family:'DM Mono',monospace;margin-right:6px;vertical-align:middle">⚠ ${esc(row.linkedLabel)}</span>`:''}
+        <input value="${esc(row.action)}" placeholder="Description de l'action..." ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} oninput="updateSharedAction('${row.id}','action',this.value)">
       </td>
-      <td>${isPI?'<span title="Supprimez la réserve dans Points importants" style="opacity:.25;font-size:.8rem;padding:4px 8px;display:inline-block">🔒</span>':`<button class="btn-del-row" onclick="delActionRow(${i})">✕</button>`}</td>`;
+      <td>
+        <select class="action-status-select" onchange="updateSharedAction('${row.id}','statut',this.value)">
+          <option ${(!row.statut||row.statut==='À faire')?'selected':''}>À faire</option>
+          <option ${row.statut==='En cours'?'selected':''}>En cours</option>
+          <option ${row.statut==='Bloqué'?'selected':''}>Bloqué</option>
+          <option ${row.statut==='Fait'?'selected':''}>Fait</option>
+        </select>
+      </td>
+      <td>${isPI?'<span title="Supprimez la réserve dans Points importants" style="opacity:.25;font-size:.8rem;padding:4px 8px;display:inline-block">🔒</span>':`<button class="btn-del-row" onclick="deleteManualAction('${row.id}')">✕</button>`}</td>`;
     tbody.appendChild(tr);
   });
 }
-function addActionRow(){actionRows.push({qui:'',date:'',action:''});saveActionRows();renderActions()}
-function delActionRow(i){if(actionRows.length<=1)return;actionRows.splice(i,1);saveActionRows();renderActions()}
+function updateSharedAction(id,field,val){
+  upsertProjectAction({id,[field]:val});
+  actionRows=getProjectActions();
+}
+function addActionRow(){
+  upsertProjectAction({id:newActionId(),qui:'',date:'',action:'',statut:'À faire'});
+  refreshActions();
+}
+function deleteManualAction(id){
+  deleteProjectActionById(id);
+  refreshActions();
+}
 
 /* ═══ POINTS IMPORTANTS ═══ */
 const PI_POINTS = ['Point sécu','Point tech','Matériel'];
@@ -680,6 +702,7 @@ function togglePI(label,type){
   }
   // Always sync to main actions table
   syncPIToActions();
+  refreshActions();
   if(newVal==='reserve') showToast(`⚠ Réserve "${label}" → action ajoutée dans Actions`);
 }
 
@@ -707,8 +730,8 @@ function addPIAction(label){
   actions.push({action:'',qui:'',date:''});
   sj('pi_actions_'+pid,actions);
   renderPIActions(label);
-  // Also sync to main actions table
   syncPIToActions();
+  refreshActions();
 }
 
 function delPIAction(label,idx){
@@ -718,6 +741,7 @@ function delPIAction(label,idx){
   sj('pi_actions_'+pid,actions);
   renderPIActions(label);
   syncPIToActions();
+  refreshActions();
 }
 
 function updatePIAction(label,idx,field,val){
@@ -727,32 +751,37 @@ function updatePIAction(label,idx,field,val){
   actions[idx][field]=val;
   sj('pi_actions_'+pid,actions);
   syncPIToActions();
+  refreshActions();
 }
 
-// Rebuilds actionRows: keeps manual rows, replaces all _pi rows with current PI state
+// Pousse les actions liées aux Points importants (réserves) dans le tableau
+// partagé du projet, avec un identifiant stable par point + index — jamais
+// dupliqué, toujours mis à jour en place.
 function syncPIToActions(){
-  // 1. Keep only manual rows (no _pi tag)
-  const manual=actionRows.filter(r=>!r._pi);
-
-  // 2. Build PI rows from all reserve points
-  const piRows=[];
   PI_POINTS.forEach(label=>{
     const pid=piId(label);
-    if(g('pi_state_'+pid)!=='reserve') return;
-    const actions=gj('pi_actions_'+pid,[]);
-    actions.forEach(a=>{
-      piRows.push({ qui:a.qui||'', date:a.date||'', action:a.action||'', _pi:label });
+    const isReserve=g('pi_state_'+pid)==='reserve';
+    const linkedPrefix='pi_'+pid+'_';
+    const existingLinked=getProjectActions().filter(a=>a.linkedKey&&a.linkedKey.startsWith(linkedPrefix));
+    if(!isReserve){
+      existingLinked.forEach(a=>deleteProjectActionById(a.id));
+      return;
+    }
+    const piActions=gj('pi_actions_'+pid,[]);
+    piActions.forEach((a,idx)=>{
+      upsertProjectAction({
+        id: linkedPrefix+idx,
+        qui: a.qui||'', date: a.date||'', action: a.action||'',
+        linkedKey: linkedPrefix+idx, linkedLabel: label,
+        sourceDocId: DOC_ID, sourceLabel: DOC_LABEL||'Ouverture de chantier'
+      });
+    });
+    // retire les entrées devenues obsolètes (actions PI supprimées)
+    existingLinked.forEach(a=>{
+      const idx=parseInt(a.linkedKey.slice(linkedPrefix.length));
+      if(idx>=piActions.length) deleteProjectActionById(a.id);
     });
   });
-
-  // 3. Merge: manual first, then PI rows
-  actionRows=[...manual,...piRows];
-
-  // 4. If table is completely empty add one blank manual row
-  if(actionRows.length===0) actionRows=[{qui:'',date:'',action:''}];
-
-  saveActionRows();
-  renderActions();
 }
 
 /* ═══ PHOTOS ═══ */
@@ -912,9 +941,9 @@ async function exportPDF(){
     });
 
     sectionTitle('Actions à mener');
-    (actionRows||[]).forEach((row,i)=>{
+    getProjectActions().forEach((row,i)=>{
       if(row.qui || row.date || row.action){
-        addField(`Action ${i+1}`, `${row.action||'\u2014'} (Responsable: ${row.qui||'\u2014'}, Date: ${row.date||'\u2014'})`);
+        addField(`Action ${i+1}`, `${row.action||'\u2014'} (Responsable: ${row.qui||'\u2014'}, Date: ${row.date||'\u2014'}, Statut: ${row.statut||'À faire'})`);
       }
     });
 
