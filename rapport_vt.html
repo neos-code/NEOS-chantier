@@ -808,6 +808,7 @@ select.field-input option { background: var(--card); }
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<script src="jspdf.umd.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════
    DONNÉES DU FORMULAIRE
@@ -1473,117 +1474,152 @@ function loadPhotos() {
 /* ═══════════════════════════════════════════
    EXPORT PDF
 ═══════════════════════════════════════════ */
-/* ═══ CHAMPS "IMPRIMABLES" (fix mobile) ═══
-   Sur mobile, la valeur des <input>/<select>/<textarea> n'est pas toujours
-   peinte par le moteur d'impression du navigateur. On la remplace donc par
-   un <div> texte équivalent, uniquement pendant l'impression. */
-function __preparePrintFields(){
-  const clones=[];
-  const isInModal=el=>el.closest('.modal-overlay');
-  document.querySelectorAll('input[type="text"],input[type="date"],input[type="number"],input[type="tel"],input[type="email"],input:not([type])').forEach(inp=>{
-    if(isInModal(inp))return;
-    const div=document.createElement('div');
-    div.className='__print-value'+(inp.classList.contains('field-input')?' field-input':'');
-    div.textContent=(inp.value&&inp.value.trim())?inp.value:'\u2014';
-    inp.insertAdjacentElement('afterend',div);
-    inp.classList.add('__print-hide');
-    clones.push({el:inp,div});
+/* ═══════════════════════════════════════════
+   EXPORT PDF (génération directe, sans passer par
+   l'impression du navigateur — plus fiable sur mobile)
+═══════════════════════════════════════════ */
+function __loadImageDims(dataUrl){
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 0, h: 0 });
+    img.src = dataUrl;
   });
-  document.querySelectorAll('select').forEach(sel=>{
-    if(isInModal(sel))return;
-    const div=document.createElement('div');
-    div.className='__print-value'+(sel.classList.contains('field-input')?' field-input':'');
-    const opt=sel.options[sel.selectedIndex];
-    div.textContent=opt?opt.textContent:'\u2014';
-    sel.insertAdjacentElement('afterend',div);
-    sel.classList.add('__print-hide');
-    clones.push({el:sel,div});
-  });
-  document.querySelectorAll('textarea').forEach(ta=>{
-    if(isInModal(ta))return;
-    const div=document.createElement('div');
-    div.className='__print-value __print-value-multiline'+(ta.classList.contains('field-input')?' field-input':'');
-    div.textContent=(ta.value&&ta.value.trim())?ta.value:'\u2014';
-    ta.insertAdjacentElement('afterend',div);
-    ta.classList.add('__print-hide');
-    clones.push({el:ta,div});
-  });
-  return clones;
-}
-function __restorePrintFields(clones){
-  clones.forEach(({el,div})=>{ el.classList.remove('__print-hide'); div.remove(); });
 }
 
-function exportPDF() {
-  // Mark all pages as print-active for @media print
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('print-active'));
-  document.querySelectorAll('.page').forEach(p => p.classList.add('print-active'));
+async function exportPDF() {
+  showToast('📄 Génération du PDF en cours…', 4000);
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageW = 210, pageH = 297;
+    const marginX = 15;
+    const contentW = pageW - marginX * 2;
+    const bottomLimit = pageH - 15;
+    let y = 20;
 
-  // Sur mobile, de nombreux navigateurs n'impriment pas le CONTENU des champs
-  // de formulaire (input/select/textarea) lors de l'export PDF — seul le texte
-  // "en dur" (titres, légendes) apparaît. On remplace donc temporairement TOUS
-  // les champs par du texte simple, uniquement le temps de l'impression.
-  const __printClones = __preparePrintFields();
-  showToast(`🔧 Diagnostic : ${__printClones.length} champs préparés, ${document.querySelectorAll('.page.print-active').length} pages actives`, 6000);
+    const checkBreak = (needed) => {
+      if (y + needed > bottomLimit) { doc.addPage(); y = 20; }
+    };
 
-  // Build print header
-  let header = document.getElementById('print-header-el');
-  if (!header) {
-    header = document.createElement('div');
-    header.id = 'print-header-el';
-    header.className = 'print-header';
-    document.body.appendChild(header);
-  }
-  const proj = loadVal('projet_nom') || '—';
-  const tech = loadVal('technicien') || '—';
-  const date = loadVal('date') || new Date().toLocaleDateString('fr-FR');
-  header.innerHTML = `
-    <h1 style="font-family:Syne,sans-serif;font-size:1.5rem;color:#1a4a8a;margin-bottom:4px">RAPPORT VISITE TECHNIQUE</h1>
-    <p style="font-size:.85rem;color:#555;margin-bottom:16px">Projet : <strong>${proj}</strong> &nbsp;|&nbsp; Technicien : <strong>${tech}</strong> &nbsp;|&nbsp; Date : <strong>${date}</strong></p>
-    <hr style="border:none;border-top:2px solid #1a4a8a;margin-bottom:20px">`;
+    const proj = loadVal('projet_nom') || '\u2014';
+    const tech = loadVal('technicien') || '\u2014';
+    const date = loadVal('date') || new Date().toLocaleDateString('fr-FR');
+    const rapnum = buildRapNum() || '\u2014';
 
-  // Build print photos section
-  let printPhotos = document.getElementById('print-photos-el');
-  if (!printPhotos) {
-    printPhotos = document.createElement('div');
-    printPhotos.id = 'print-photos-el';
-    printPhotos.className = 'print-photos';
-    document.body.appendChild(printPhotos);
-  }
-  const photoEntries = Object.entries(photoData).filter(([,v])=>v?.dataUrl);
-  if (photoEntries.length) {
-    printPhotos.innerHTML = `<h2 style="font-family:Syne,sans-serif;font-size:1.1rem;color:#1a4a8a;margin:20px 0 12px">PHOTOS</h2>` +
-      photoEntries.map(([label, v]) => `
-        <div class="print-photo-item">
-          <p style="font-weight:600;font-size:.88rem;margin-bottom:6px">${label}</p>
-          <img src="${v.dataUrl}" style="max-width:100%;max-height:200px;object-fit:contain;border:1px solid #ddd;border-radius:6px">
-          ${v.comment ? `<p class="print-photo-caption">Commentaire : ${v.comment}</p>` : ''}
-        </div>`).join('');
-  } else {
-    printPhotos.innerHTML = '';
-  }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(26, 74, 138);
+    doc.text('RAPPORT VISITE TECHNIQUE', marginX, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(85, 85, 85);
+    doc.text(`N° : ${rapnum}`, marginX, y);
+    y += 5;
+    doc.text(`Projet : ${proj}   |   Technicien : ${tech}   |   Date : ${date}`, marginX, y);
+    y += 4;
+    doc.setDrawColor(26, 74, 138);
+    doc.setLineWidth(0.6);
+    doc.line(marginX, y, pageW - marginX, y);
+    y += 8;
 
-  // Double requestAnimationFrame : garantit qu'au moins un rendu/peinture a eu
-  // lieu après le basculement de toutes les pages en visible, avant de lancer
-  // l'impression (sur mobile, un simple délai fixe n'est pas toujours suffisant).
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        let __cleaned = false;
-        const __cleanup = () => {
-          if (__cleaned) return;
-          __cleaned = true;
-          document.querySelectorAll('.page').forEach(p => p.classList.remove('print-active'));
-          document.getElementById(`page-${allPages[currentPage]}`)?.classList.add('active');
-          __restorePrintFields(__printClones);
-          window.removeEventListener('afterprint', __cleanup);
-        };
-        window.addEventListener('afterprint', __cleanup);
-        window.print();
-        setTimeout(__cleanup, 20000);
-      }, 350);
+    SECTIONS.forEach(section => {
+      section.groups.forEach(group => {
+        checkBreak(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(26, 74, 138);
+        doc.text(`${section.title} \u2014 ${group.title}`, marginX, y);
+        y += 3;
+        doc.setDrawColor(210, 210, 210);
+        doc.setLineWidth(0.2);
+        doc.line(marginX, y, pageW - marginX, y);
+        y += 5;
+
+        group.fields.forEach(field => {
+          const raw = loadVal(field.id);
+          const val = (raw && String(raw).trim()) ? String(raw) : '\u2014';
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(60, 60, 60);
+          const labelText = field.label + ' :';
+          doc.text(labelText, marginX, y);
+          const labelW = doc.getTextWidth(labelText);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(15, 15, 15);
+          const valX = marginX + Math.min(labelW + 3, 70);
+          const valW = contentW - (valX - marginX);
+          const lines = doc.splitTextToSize(val, valW);
+          checkBreak(lines.length * 4.3 + 2);
+          // re-draw label after potential page break
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(60, 60, 60);
+          doc.text(labelText, marginX, y);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(15, 15, 15);
+          doc.text(lines, valX, y);
+          y += Math.max(lines.length * 4.3, 4.3) + 1.8;
+        });
+        y += 3;
+      });
     });
-  });
+
+    const photoEntries = Object.entries(photoData).filter(([,v]) => v?.dataUrl);
+    if (photoEntries.length) {
+      doc.addPage();
+      y = 20;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(26, 74, 138);
+      doc.text('PHOTOS', marginX, y);
+      y += 9;
+
+      for (const [label, v] of photoEntries) {
+        const dims = await __loadImageDims(v.dataUrl);
+        let imgW = contentW, imgH = 70;
+        if (dims.w && dims.h) {
+          imgW = Math.min(contentW, 130);
+          imgH = imgW * (dims.h / dims.w);
+          if (imgH > 100) { imgH = 100; imgW = imgH * (dims.w / dims.h); }
+        }
+        checkBreak(imgH + 14);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(20, 20, 20);
+        doc.text(label, marginX, y);
+        y += 4;
+        try {
+          const fmt = v.dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+          doc.addImage(v.dataUrl, fmt, marginX, y, imgW, imgH);
+          y += imgH + 2;
+        } catch (e) {
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(8.5);
+          doc.text('(photo non intégrée)', marginX, y);
+          y += 5;
+        }
+        if (v.comment) {
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(8.5);
+          doc.setTextColor(80, 80, 80);
+          const cLines = doc.splitTextToSize(`Commentaire : ${v.comment}`, contentW);
+          checkBreak(cLines.length * 4);
+          doc.text(cLines, marginX, y);
+          y += cLines.length * 4;
+        }
+        y += 6;
+      }
+    }
+
+    const filename = `RapportVT_${rapnum.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
+    doc.save(filename);
+    showToast('✔ PDF généré : ' + filename, 3500);
+  } catch (e) {
+    console.error(e);
+    showToast('\u274c Erreur lors de la génération du PDF : ' + e.message, 6000);
+  }
 }
 
 /* ═══════════════════════════════════════════
