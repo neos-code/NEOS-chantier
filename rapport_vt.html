@@ -281,6 +281,7 @@ select.field-input option { background: var(--card); }
   transition: border-color .15s;
 }
 .photo-card.has-photo { border-color: var(--ok); }
+.photo-card-inline { margin: 12px 0; }
 .photo-card-header {
   padding: 11px 14px;
   display: flex;
@@ -841,6 +842,9 @@ const SECTIONS = [
       { id:"puissance",     label:"Puissance envisagée (kWc)",  type:"text" },
       { id:"erp",           label:"ERP",                        type:"yesno" },
       { id:"date_realisation",label:"Date réalisation souhaitée", type:"date" },
+      { type:"photo", label:"Vue générale du site", num:1 },
+      { type:"photo", label:"Vue rapprochée", num:2 },
+      { type:"photo", label:"Vue depuis voie publique", num:3 },
     ]},
     { title:"Commentaire", fields:[
       { id:"commentaire_projet", label:"Commentaire projet", type:"memo" },
@@ -849,12 +853,15 @@ const SECTIONS = [
   { id:"environnement", icon:"🌿", title:"Environnement", groups:[
     { title:"Contraintes", fields:[
       { id:"ombre_portee",  label:"Ombre portée",          type:"yesno" },
+      { type:"photo", label:"Ombre portée", num:4 },
       { id:"obstacles",     label:"Présence d'obstacles",  type:"yesno" },
+      { type:"photo", label:"Obstacle", num:5 },
       { id:"detail_obstacles",label:"Détails obstacles",   type:"text" },
     ]},
     { title:"Conditions", fields:[
       { id:"vent",          label:"Exposition au vent",    type:"select", options:["Faible","Moyenne","Forte"] },
       { id:"gsm",           label:"Réseau GSM",            type:"yesno" },
+      { type:"photo", label:"Réseau GSM", num:6 },
     ]},
     { title:"Commentaire", fields:[
       { id:"commentaire_env", label:"Commentaire environnement", type:"memo" },
@@ -876,12 +883,19 @@ const SECTIONS = [
     { title:"Commentaire", fields:[
       { id:"commentaire_acc", label:"Commentaire accessibilité", type:"memo" },
     ]},
+    { title:"Photos", fields:[
+      { type:"photo", label:"Stockage sur site", num:7 },
+      { type:"photo", label:"Accès chantier", num:8 },
+      { type:"photo", label:"Accès toiture", num:9 },
+      { type:"photo", label:"Accès chantier poids lourd", num:10 },
+    ]},
   ]},
   { id:"ouvrage", icon:"🏗️", title:"Ouvrage", groups:[
     { title:"Informations générales", fields:[
       { id:"annee_construction",label:"Année de construction",    type:"text" },
       { id:"plan_dispo",        label:"Plan bâtiment disponible", type:"yesno" },
       { id:"comment_infogen",   label:"Commentaire(s)",           type:"memo" },
+      { type:"photo", label:"Plan de masse", num:13 },
     ]},
     { title:"Dimensions bâtiment / toiture", fields:[
       { id:"longueur",      label:"Longueur bâtiment (m)",  type:"text" },
@@ -898,12 +912,14 @@ const SECTIONS = [
       { id:"type_charpente",label:"Type de charpente",  type:"select", options:["Bois","Métal","Béton","Bois-métal"] },
       { id:"etat_charpente",label:"État de la charpente",type:"select", options:["Neuf","Très bon","Bon","Mauvais"] },
       { id:"comment_charpente",label:"Commentaire",     type:"text" },
+      { type:"photo", label:"Charpente", num:11 },
     ]},
     { title:"Couverture", fields:[
       { id:"type_couverture",label:"Type de couverture",  type:"select", options:["Bac acier","Tôle","Ardoise","Tuiles","Fibrociment","Toiture-terrasse","Autre"] },
       { id:"etat_couverture",label:"État de la couverture",type:"select", options:["Neuf","Très bon","Bon","Mauvais"] },
       { id:"dim_sandwich",  label:"Dim couverture",type:"text" },
       { id:"comment_couverture", label:"Commentaire(s)",        type:"memo" },
+      { type:"photo", label:"Couverture", num:12 },
     ]},
     { title:"Isolant", fields:[
       { id:"type_isolant",  label:"Type d'isolant",  type:"select", options:["Laine de verre","Laine de roche","Panneau","Polystyrène","Aucun"] },
@@ -917,6 +933,8 @@ const SECTIONS = [
       { id:"conservation_ae",label:"Conservation aération",   type:"yesno" },
       { id:"trappe",        label:"Trappe d'accès",           type:"yesno" },
       { id:"conservation_tr",label:"Conservation trappe",     type:"yesno" },
+      { type:"photo", label:"Puits de lumière", num:14 },
+      { type:"photo", label:"Aération", num:15 },
       { id:"comment_obstacles",label:"Commentaire obstacles", type:"text" },
     ]},
     { title:"Actions ouvrage", fields:[
@@ -931,6 +949,7 @@ const SECTIONS = [
       { id:"empl_onduleur",  label:"Emplacement onduleur",   type:"select", options:["Intérieur bâtiment","Local TGBT","Shelter","Sous-sol","Autre"] },
       { id:"type_mur",       label:"Type de mur",            type:"select", options:["Béton","Placo BA13","Bois","Pierre","Autre"] },
       { id:"comment_onduleur",label:"Commentaire",           type:"text" },
+      { type:"photo", label:"Onduleur (emplacement)", num:16 },
     ]},
     { title:"Conditions onduleur", fields:[
       { id:"zone_accessible",label:"Zone accessible",           type:"yesno" },
@@ -952,11 +971,14 @@ const SECTIONS = [
       { id:"rangees_libres", label:"Nb rangées libres",          type:"text" },
       { id:"phases",         label:"Mono/triphasé",              type:"select", options:["Monophasé","Triphasé"] },
       { id:"comment_tgbt",   label:"Commentaire TGBT",           type:"text" },
+      { type:"photo", label:"TGBT", num:17 },
+      { type:"photo", label:"Disjoncteur principal", num:18 },
     ]},
     { title:"PDL", fields:[
       { id:"nouveau_pdl",    label:"Créer nouveau PDL",          type:"yesno" },
       { id:"dist_transfo",   label:"Distance transformateur (m)",type:"text" },
       { id:"comment_pdl",    label:"Commentaire(s)",             type:"memo" },
+      { type:"photo", label:"PDL", num:19 },
     ]},
     { title:"Câblage AC/DC", fields:[
       { id:"video_ac",       label:"Photo passage câbles AC",    type:"yesno" },
@@ -966,6 +988,8 @@ const SECTIONS = [
       { id:"chemin_cable",   label:"Chemin de câble existant",   type:"yesno" },
       { id:"gaine_enterree", label:"Gaine enterrée",             type:"yesno" },
       { id:"dist_gaine",     label:"Distance gaine",             type:"text" },
+      { type:"photo", label:"Passage DC", num:22 },
+      { type:"photo", label:"Passage AC", num:23 },
     ]},
     { title:"Schémas & Terre", fields:[
       { id:"schema_principe",label:"Schéma de principe",         type:"yesno" },
@@ -974,10 +998,12 @@ const SECTIONS = [
       { id:"regard_terre",   label:"Mise à la terre",            type:"yesno" },
       { id:"photos_regard",  label:"Photos mise à la terre",     type:"yesno" },
       { id:"etat_regard",    label:"Etat de la mise à la terre",  type:"select", options:["Neuf","Très bon","Bon","Mauvais"] },
+      { type:"photo", label:"Mise à la terre", num:21 },
     ]},
     { title:"Groupe électrogène", fields:[
       { id:"groupe_elec",    label:"Groupe électrogène",         type:"yesno" },
       { id:"batiments_groupe",label:"Bâtiments alimentés",       type:"text" },
+      { type:"photo", label:"Groupe électrogène", num:20 },
     ]},
     { title:"Actions", fields:[
       { id:"actions_elec",   label:"Actions à mener",            type:"memo" },
@@ -1000,14 +1026,14 @@ const PHOTOS = [
 ═══════════════════════════════════════════ */
 let currentPage = 0;
 const photoData = {}; // key: label -> { dataUrl, comment }
-const allPages = [...SECTIONS.map(s=>s.id), 'photos'];
+const allPages = SECTIONS.map(s=>s.id);
 
 /* ═══════════════════════════════════════════
    BUILD UI
 ═══════════════════════════════════════════ */
 function buildNav() {
   const nav = document.getElementById('nav');
-  const pages = [...SECTIONS, { id:'photos', icon:'📷', title:'Photos' }];
+  const pages = SECTIONS;
   pages.forEach((s, i) => {
     const btn = document.createElement('button');
     btn.className = 'nav-btn' + (i === 0 ? ' active' : '');
@@ -1036,6 +1062,10 @@ function buildContent() {
       const body = card.querySelector('.section-card-body');
 
       group.fields.forEach(field => {
+        if (field.type === 'photo') {
+          body.appendChild(renderPhotoCard(field.label, field.num));
+          return;
+        }
         const row = document.createElement('div');
         row.className = 'field-row';
         row.id = 'row-' + field.id;
@@ -1051,23 +1081,6 @@ function buildContent() {
     });
     content.appendChild(page);
   });
-
-  // Photos page
-  const photosPage = document.createElement('div');
-  photosPage.className = 'page';
-  photosPage.id = 'page-photos';
-  photosPage.innerHTML = `
-    <div class="section-card" style="margin-bottom:20px">
-      <div class="section-card-header"><h3>📷 Photos à prendre sur chantier</h3></div>
-      <div class="section-card-body" style="color:var(--muted);font-size:.83rem">
-        Appuyez sur <strong style="color:var(--accent)">Prendre une photo</strong> pour ouvrir l'appareil photo.
-        Vous pouvez aussi choisir une image depuis la galerie. Ajoutez un commentaire si nécessaire.
-      </div>
-    </div>
-    <div class="photo-grid" id="photo-grid"></div>`;
-  content.appendChild(photosPage);
-
-  buildPhotoGrid();
 }
 
 function updateConditionalFields(){
@@ -1127,40 +1140,34 @@ function buildField(field) {
   return '';
 }
 
-function buildPhotoGrid() {
-  const grid = document.getElementById('photo-grid');
-  PHOTOS.forEach((label, i) => {
-    const pid = photoId(label);
-    const card = document.createElement('div');
-    card.className = 'photo-card';
-    card.id = `pcard-${pid}`;
-    card.innerHTML = `
-      <div class="photo-card-header">
-        <span class="photo-num">${String(i+1).padStart(2,'0')}</span>
-        <span class="photo-label">${label}</span>
-        <span class="photo-status" id="pstatus-${pid}">En attente</span>
+function renderPhotoCard(label, num) {
+  const pid = photoId(label);
+  const card = document.createElement('div');
+  card.className = 'photo-card photo-card-inline';
+  card.id = `pcard-${pid}`;
+  card.innerHTML = `
+    <div class="photo-card-header">
+      <span class="photo-num">${String(num).padStart(2,'0')}</span>
+      <span class="photo-label">${label}</span>
+      <span class="photo-status" id="pstatus-${pid}">En attente</span>
+    </div>
+    <img class="photo-preview" id="pimg-${pid}" src="" alt="">
+    <div class="photo-placeholder" id="pph-${pid}">
+      <span class="ph-icon">📷</span>
+      <span>Aucune photo</span>
+    </div>
+    <div class="photo-actions">
+      <input type="file" accept="image/*" capture="environment" class="photo-file-input" id="pinput-cam-${pid}" onchange="handlePhoto('${label}',this)">
+      <input type="file" accept="image/*" class="photo-file-input" id="pinput-gal-${pid}" onchange="handlePhoto('${label}',this)">
+      <button class="btn-photo primary" onclick="openCamera('${label}')">📷 Prendre une photo</button>
+      <button class="btn-photo" onclick="document.getElementById('pinput-gal-${pid}').click()">🖼 Choisir depuis la galerie</button>
+      <div class="photo-actions-row">
+        <button class="btn-photo" id="pbtn-annotate-${pid}" style="display:none" onclick="openAnnotate('${label}')">✏️ Annoter</button>
+        <button class="btn-photo danger" id="pbtn-delete-${pid}" style="display:none" onclick="deletePhoto('${label}')">🗑 Effacer</button>
       </div>
-      <img class="photo-preview" id="pimg-${pid}" src="" alt="">
-      <div class="photo-placeholder" id="pph-${pid}">
-        <span class="ph-icon">📷</span>
-        <span>Aucune photo</span>
-      </div>
-      <div class="photo-actions">
-        <input type="file" accept="image/*" capture="environment" class="photo-file-input" id="pinput-cam-${pid}" onchange="handlePhoto('${label}',this)">
-        <input type="file" accept="image/*" class="photo-file-input" id="pinput-gal-${pid}" onchange="handlePhoto('${label}',this)">
-        <button class="btn-photo primary" onclick="openCamera('${label}')">📷 Prendre une photo</button>
-        <button class="btn-photo" onclick="document.getElementById('pinput-gal-${pid}').click()">🖼 Choisir depuis la galerie</button>
-        <div class="photo-actions-row">
-          <button class="btn-photo" id="pbtn-annotate-${pid}" style="display:none" onclick="openAnnotate('${label}')">✏️ Annoter</button>
-          <button class="btn-photo danger" id="pbtn-delete-${pid}" style="display:none" onclick="deletePhoto('${label}')">🗑 Effacer</button>
-        </div>
-        <textarea class="photo-comment" id="pcomment-${pid}" placeholder="Commentaire (optionnel)..." oninput="savePhotoComment('${label}',this.value)">${photoData[label]?.comment||''}</textarea>
-      </div>`;
-    grid.appendChild(card);
-
-    // restore
-    if (photoData[label]?.dataUrl) showPhoto(label, photoData[label].dataUrl);
-  });
+      <textarea class="photo-comment" id="pcomment-${pid}" placeholder="Commentaire (optionnel)..." oninput="savePhotoComment('${label}',this.value)">${photoData[label]?.comment||''}</textarea>
+    </div>`;
+  return card;
 }
 
 /* ═══════════════════════════════════════════
@@ -1184,6 +1191,7 @@ function switchPage(idx) {
 function updateProgress() {
   let total = 0, filled = 0;
   SECTIONS.forEach(s => s.groups.forEach(g => g.fields.forEach(f => {
+    if (f.type === 'photo') return;
     total++;
     const v = loadVal(f.id);
     if (v && v.trim()) filled++;
@@ -1579,6 +1587,7 @@ async function exportPDF() {
         y += 5;
 
         group.fields.forEach(field => {
+          if (field.type === 'photo') return;
           const raw = loadVal(field.id);
           const val = (raw && String(raw).trim()) ? String(raw) : '\u2014';
           doc.setFont('helvetica', 'bold');
@@ -1607,7 +1616,9 @@ async function exportPDF() {
       });
     });
 
-    const photoEntries = Object.entries(photoData).filter(([,v]) => v?.dataUrl);
+    const photoEntries = PHOTOS
+      .map(label => [label, photoData[label]])
+      .filter(([,v]) => v?.dataUrl);
     if (photoEntries.length) {
       doc.addPage();
       y = 20;
