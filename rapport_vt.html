@@ -8,6 +8,7 @@
 <title>Rapport Visite Technique</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+input[type="date"]{color-scheme:dark}
 /* ═══════════════════════════════════════════
    VARIABLES & RESET
 ═══════════════════════════════════════════ */
@@ -814,11 +815,11 @@ select.field-input option { background: var(--card); }
    DONNÉES DU FORMULAIRE
 ═══════════════════════════════════════════ */
 const SECTIONS = [
-  { id:"entete", icon:"📋", title:"En-tête", groups:[
+  { id:"entete", icon:"📋", title:"Général", groups:[
     { title:"Informations générales", fields:[
       { id:"rapport_num",   label:"N° de rapport (auto)", type:"rapnum" },
       { id:"technicien",    label:"Technicien",        type:"text" },
-      { id:"date",          label:"Date",              type:"text", default: new Date().toLocaleDateString('fr-FR') },
+      { id:"date",          label:"Date",              type:"date", default: new Date().toLocaleDateString('fr-FR') },
     ]},
     { title:"Identification du projet", fields:[
       { id:"dept",          label:"N° département (2 chiffres)", type:"text_dept" },
@@ -839,7 +840,7 @@ const SECTIONS = [
       { id:"calepinage",    label:"Calepinage",                 type:"select", options:["Portrait","Paysage","Mixte"] },
       { id:"puissance",     label:"Puissance envisagée (kWc)",  type:"text" },
       { id:"erp",           label:"ERP",                        type:"yesno" },
-      { id:"date_realisation",label:"Date réalisation souhaitée", type:"text" },
+      { id:"date_realisation",label:"Date réalisation souhaitée", type:"date" },
     ]},
     { title:"Commentaire", fields:[
       { id:"commentaire_projet", label:"Commentaire projet", type:"memo" },
@@ -945,7 +946,7 @@ const SECTIONS = [
     ]},
     { title:"TGBT", fields:[
       { id:"tgbt_conforme",  label:"TGBT conforme",              type:"yesno" },
-      { id:"tgbt_date",      label:"Date installation TGBT",     type:"text" },
+      { id:"tgbt_date",      label:"Date installation TGBT",     type:"date" },
       { id:"onduleur_cote",  label:"Onduleur à côté du TGBT",    type:"yesno" },
       { id:"place_tgbt",     label:"Place dispo dans TGBT",      type:"yesno" },
       { id:"rangees_libres", label:"Nb rangées libres",          type:"text" },
@@ -1079,6 +1080,20 @@ function updateConditionalFields(){
   })));
 }
 
+/* ═══ DATES (conversion FR <-> ISO pour le sélecteur natif) ═══ */
+function __dateToISO(str){
+  if(!str) return '';
+  const m = String(str).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m) return '';
+  return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+}
+function __dateFromISO(iso){
+  if(!iso) return '';
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return '';
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
 function buildField(field) {
   const val = loadVal(field.id);
   if (field.type === 'rapnum') {
@@ -1086,6 +1101,9 @@ function buildField(field) {
   }
   if (field.type === 'text') {
     return `<input class="field-input" type="text" id="f_${field.id}" value="${escHtml(val)}" oninput="saveVal('${field.id}',this.value);updateProgress()">`;
+  }
+  if (field.type === 'date') {
+    return `<input class="field-input" type="date" id="f_${field.id}" value="${__dateToISO(val)}" onchange="saveVal('${field.id}', __dateFromISO(this.value));updateProgress()">`;
   }
   if (field.type === 'text_dept') {
     return `<input class="field-input" type="text" id="f_${field.id}" value="${escHtml(val)}" maxlength="3" oninput="saveVal('${field.id}',this.value);updateRapNum();updateProgress()">`;

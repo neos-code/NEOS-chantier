@@ -8,6 +8,7 @@
 <title>Rapport Fermeture Chantier</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+input[type="date"]{color-scheme:dark}
 :root {
   --bg:        #0f1117;
   --panel:     #181c28;
@@ -480,7 +481,7 @@ select.field-input option { background: var(--card); }
 <script>
 /* ═══ CONFIG PAGES ═══ */
 const PAGES = [
-  { id:'entete',     icon:'📋', title:'En-tête' },
+  { id:'entete',     icon:'📋', title:'Général' },
   { id:'participants',icon:'👥', title:'Participants' },
   { id:'reunion',    icon:'📝', title:'Réunion' },
   { id:'ouvrage',    icon:'🏗', title:'Ouvrage' },
@@ -516,6 +517,20 @@ document.addEventListener('DOMContentLoaded', ()=>{
 /* ═══ STORAGE ═══ */
 function s(id, val) { try { localStorage.setItem(PFX+id, val); } catch(e){} }
 function g(id, def='') { try { const v=localStorage.getItem(PFX+id); return v!==null?v:def; } catch(e){ return def; } }
+
+/* ═══ DATES (conversion FR <-> ISO pour le sélecteur natif) ═══ */
+function __dateToISO(str){
+  if(!str) return '';
+  const m = String(str).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m) return '';
+  return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+}
+function __dateFromISO(iso){
+  if(!iso) return '';
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return '';
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
 function sj(id, val) { try { localStorage.setItem(PFX+id, JSON.stringify(val)); } catch(e){} }
 function gj(id, def) { try { const v=localStorage.getItem(PFX+id); return v?JSON.parse(v):def; } catch(e){ return def; } }
 
@@ -577,7 +592,7 @@ function buildContent() {
   p1.appendChild(card('📋 Identification du rapport', `
     <div class="field-row"><span class="field-label">N° de rapport (auto)</span><div class="rapnum-display" id="f_rapport_num">${buildRapNum()}</div></div>
     <div class="field-row"><span class="field-label">Technicien</span><input class="field-input" id="f_technicien" value="${esc(g('technicien'))}" oninput="s('technicien',this.value);updateProgress()"></div>
-    <div class="field-row"><span class="field-label">Date</span><input class="field-input" id="f_date" value="${esc(g('date', new Date().toLocaleDateString('fr-FR')))}" oninput="s('date',this.value);updateProgress()"></div>
+    <div class="field-row"><span class="field-label">Date</span><input class="field-input" type="date" id="f_date" value="${__dateToISO(g('date', new Date().toLocaleDateString('fr-FR')))}" onchange="s('date',__dateFromISO(this.value));updateProgress()"></div>
   `));
   p1.appendChild(card('📍 Informations du projet', `
     <div class="field-row"><span class="field-label">Nom du projet</span><input class="field-input" id="f_projet_nom" value="${esc(g('projet_nom'))}" oninput="s('projet_nom',this.value);updateRapNum();updateProgress()"></div>
@@ -617,8 +632,8 @@ function buildContent() {
   p3.appendChild(card('📝 Points de la réunion', `
     <div class="field-row"><span class="field-label">Rappel du projet</span><textarea class="field-input" style="min-height:110px" id="f_rappel_projet" oninput="s('rappel_projet',this.value);updateProgress()">${esc(g('rappel_projet'))}</textarea></div>
     <div class="field-row"><span class="field-label">Durée des travaux</span><input class="field-input" id="f_duree_travaux" value="${esc(g('duree_travaux'))}" oninput="s('duree_travaux',this.value);updateProgress()"></div>
-    <div class="field-row"><span class="field-label">Date de mise en service sous-traitant</span><input class="field-input" id="f_date_mes_st" value="${esc(g('date_mes_st'))}" oninput="s('date_mes_st',this.value);updateProgress()"></div>
-    <div class="field-row"><span class="field-label">Date de mise en service NEOS</span><input class="field-input" id="f_date_mes_neos" value="${esc(g('date_mes_neos'))}" oninput="s('date_mes_neos',this.value);updateProgress()"></div>
+    <div class="field-row"><span class="field-label">Date de mise en service sous-traitant</span><input class="field-input" type="date" id="f_date_mes_st" value="${__dateToISO(g('date_mes_st'))}" onchange="s('date_mes_st',__dateFromISO(this.value));updateProgress()"></div>
+    <div class="field-row"><span class="field-label">Date de mise en service NEOS</span><input class="field-input" type="date" id="f_date_mes_neos" value="${__dateToISO(g('date_mes_neos'))}" onchange="s('date_mes_neos',__dateFromISO(this.value));updateProgress()"></div>
     <div class="field-row"><span class="field-label">Points spécifiques</span><textarea class="field-input" style="min-height:110px" id="f_points_specifiques" oninput="s('points_specifiques',this.value);updateProgress()">${esc(g('points_specifiques'))}</textarea></div>
   `));
   content.appendChild(p3);
@@ -681,7 +696,7 @@ function buildContent() {
   p7.appendChild(actCard);
   p7.appendChild(card('📅 Prochaine réunion', `
     <div class="field-row"><span class="field-label">Prochaine réunion</span><input class="field-input" id="f_prochaine_reunion" value="${esc(g('prochaine_reunion','À définir'))}" oninput="s('prochaine_reunion',this.value);updateProgress()"></div>
-    <div class="field-row"><span class="field-label">Date</span><input class="field-input" id="f_date_prochaine_reunion" value="${esc(g('date_prochaine_reunion'))}" oninput="s('date_prochaine_reunion',this.value);updateProgress()"></div>
+    <div class="field-row"><span class="field-label">Date</span><input class="field-input" type="date" id="f_date_prochaine_reunion" value="${__dateToISO(g('date_prochaine_reunion'))}" onchange="s('date_prochaine_reunion',__dateFromISO(this.value));updateProgress()"></div>
   `));
   content.appendChild(p7);
 
@@ -720,7 +735,7 @@ function retourCard(title, items) {
         <div class="reserve-action-title">⚡ Action liée à cette réserve</div>
         <div class="reserve-action-fields">
           <input id="act-qui-${item.id}"    placeholder="Responsable (Qui)"  value="${esc(g('retour_act_qui_'+item.id))}"    oninput="s('retour_act_qui_${item.id}',this.value);syncReserveActions()">
-          <input id="act-date-${item.id}"   placeholder="Date (jj/mm/aaaa)"  value="${esc(g('retour_act_date_'+item.id))}"   oninput="s('retour_act_date_${item.id}',this.value);syncReserveActions()">
+          <input id="act-date-${item.id}"   type="date" value="${__dateToISO(g('retour_act_date_'+item.id))}"   onchange="s('retour_act_date_${item.id}',__dateFromISO(this.value));syncReserveActions()">
           <input id="act-action-${item.id}" placeholder="Description de l'action..." value="${esc(g('retour_act_action_'+item.id))}" oninput="s('retour_act_action_${item.id}',this.value);syncReserveActions()">
         </div>
       </div>
@@ -826,7 +841,7 @@ function renderActions() {
       : '';
     tr.innerHTML = `
       <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].qui=this.value;sj('action_rows',actionRows)"></td>
-      <td><input value="${esc(row.date)}" placeholder="jj/mm/aaaa" ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].date=this.value;sj('action_rows',actionRows)"></td>
+      <td><input type="date" value="${__dateToISO(row.date)}" ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} onchange="actionRows[${i}].date=__dateFromISO(this.value);sj('action_rows',actionRows)"></td>
       <td><div style="display:flex;align-items:center">${badge}<input value="${esc(row.action)}" placeholder="Description de l'action..." ${isReserve?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].action=this.value;sj('action_rows',actionRows)"></div></td>
       <td>${isReserve ? '<span style="font-size:.7rem;color:var(--muted);padding:4px 8px" title="Gérer depuis la section Ouvrage/Électrique">🔒</span>' : `<button class="btn-del-row" onclick="delActionRow(${i})">✕</button>`}</td>`;
     tbody.appendChild(tr);

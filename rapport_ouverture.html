@@ -8,6 +8,7 @@
 <title>Rapport Ouverture Chantier</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+input[type="date"]{color-scheme:dark}
 :root {
   --bg:#0f1117; --panel:#181c28; --card:#1e2335; --border:#2a3050;
   --accent:#f0b429; --accent2:#38bdf8; --ok:#34d399; --danger:#f87171;
@@ -258,7 +259,7 @@ select.field-input option{background:var(--card)}
 <script src="jspdf.umd.min.js"></script>
 <script>
 const PAGES = [
-  { id:'entete',       icon:'📋', title:'En-tête' },
+  { id:'entete',       icon:'📋', title:'Général' },
   { id:'participants', icon:'👥', title:'Participants' },
   { id:'reunion',      icon:'📝', title:'Réunion' },
   { id:'actions',      icon:'✅', title:'Actions' },
@@ -290,6 +291,20 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 function s(id,val){try{localStorage.setItem(PFX+id,val)}catch(e){}}
 function g(id,def=''){try{const v=localStorage.getItem(PFX+id);return v!==null?v:def}catch(e){return def}}
+
+/* ═══ DATES (conversion FR <-> ISO pour le sélecteur natif) ═══ */
+function __dateToISO(str){
+  if(!str) return '';
+  const m = String(str).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m) return '';
+  return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+}
+function __dateFromISO(iso){
+  if(!iso) return '';
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return '';
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
 function sj(id,val){try{localStorage.setItem(PFX+id,JSON.stringify(val))}catch(e){}}
 function gj(id,def){try{const v=localStorage.getItem(PFX+id);return v?JSON.parse(v):def}catch(e){return def}}
 
@@ -348,7 +363,7 @@ function buildContent(){
   p1.appendChild(card('📋 Identification du rapport',`
     <div class="field-row"><span class="field-label">N° de rapport (auto)</span><div class="rapnum-display" id="f_rapport_num">${buildRapNum()}</div></div>
     <div class="field-row"><span class="field-label">Technicien</span><input class="field-input" id="f_technicien" value="${esc(g('technicien','Khalil NEFFATI'))}" oninput="s('technicien',this.value);updateProgress()"></div>
-    <div class="field-row"><span class="field-label">Date</span><input class="field-input" id="f_date" value="${esc(g('date',new Date().toLocaleDateString('fr-FR')))}" oninput="s('date',this.value);updateProgress()"></div>
+    <div class="field-row"><span class="field-label">Date</span><input class="field-input" type="date" id="f_date" value="${__dateToISO(g('date',new Date().toLocaleDateString('fr-FR')))}" onchange="s('date',__dateFromISO(this.value));updateProgress()"></div>
   `));
   p1.appendChild(card('📍 Informations du projet',`
     <div class="field-row"><span class="field-label">Nom du projet</span><input class="field-input" id="f_projet_nom" value="${esc(g('projet_nom'))}" oninput="s('projet_nom',this.value);updateRapNum();updateProgress()"></div>
@@ -385,10 +400,10 @@ function buildContent(){
   const p3=mkPage('reunion');
   p3.appendChild(card('📝 Points de la réunion',`
     <div class="field-row"><span class="field-label">Rappel du projet</span><textarea class="field-input" style="min-height:110px" id="f_rappel_projet" oninput="s('rappel_projet',this.value);updateProgress()">${esc(g('rappel_projet'))}</textarea></div>
-    <div class="field-row"><span class="field-label">Date de démarrage chantier</span><input class="field-input" id="f_date_demarrage" value="${esc(g('date_demarrage'))}" oninput="s('date_demarrage',this.value);updateProgress()"></div>
+    <div class="field-row"><span class="field-label">Date de démarrage chantier</span><input class="field-input" type="date" id="f_date_demarrage" value="${__dateToISO(g('date_demarrage'))}" onchange="s('date_demarrage',__dateFromISO(this.value));updateProgress()"></div>
     <div class="field-row"><span class="field-label">Durée des travaux estimée</span><input class="field-input" id="f_duree_travaux_estimee" value="${esc(g('duree_travaux_estimee'))}" oninput="s('duree_travaux_estimee',this.value);updateProgress()"></div>
-    <div class="field-row"><span class="field-label">Date de mise en service sous-traitant</span><input class="field-input" id="f_date_mes_st" value="${esc(g('date_mes_st'))}" oninput="s('date_mes_st',this.value);updateProgress()"></div>
-    <div class="field-row"><span class="field-label">Date de mise en service NEOS</span><input class="field-input" id="f_date_mes_neos" value="${esc(g('date_mes_neos'))}" oninput="s('date_mes_neos',this.value);updateProgress()"></div>
+    <div class="field-row"><span class="field-label">Date de mise en service sous-traitant</span><input class="field-input" type="date" id="f_date_mes_st" value="${__dateToISO(g('date_mes_st'))}" onchange="s('date_mes_st',__dateFromISO(this.value));updateProgress()"></div>
+    <div class="field-row"><span class="field-label">Date de mise en service NEOS</span><input class="field-input" type="date" id="f_date_mes_neos" value="${__dateToISO(g('date_mes_neos'))}" onchange="s('date_mes_neos',__dateFromISO(this.value));updateProgress()"></div>
     <div class="field-row"><span class="field-label">Points spécifiques</span><textarea class="field-input" style="min-height:110px" id="f_points_specifiques" oninput="s('points_specifiques',this.value);updateProgress()">${esc(g('points_specifiques'))}</textarea></div>
   `));
 
@@ -416,7 +431,7 @@ function buildContent(){
   p4.appendChild(actCard);
   p4.appendChild(card('📅 Prochaine réunion',`
     <div class="field-row"><span class="field-label">Prochaine réunion</span><input class="field-input" id="f_prochaine_reunion" value="${esc(g('prochaine_reunion','À définir'))}" oninput="s('prochaine_reunion',this.value);updateProgress()"></div>
-    <div class="field-row"><span class="field-label">Date</span><input class="field-input" id="f_date_prochaine_reunion" value="${esc(g('date_prochaine_reunion'))}" oninput="s('date_prochaine_reunion',this.value);updateProgress()"></div>
+    <div class="field-row"><span class="field-label">Date</span><input class="field-input" type="date" id="f_date_prochaine_reunion" value="${__dateToISO(g('date_prochaine_reunion'))}" onchange="s('date_prochaine_reunion',__dateFromISO(this.value));updateProgress()"></div>
     <div class="field-row"><span class="field-label">Rédigé par</span><input class="field-input" id="f_redige_par" value="${esc(g('redige_par','Khalil NEFFATI'))}" oninput="s('redige_par',this.value)"></div>
   `));
   content.appendChild(p4);
@@ -508,7 +523,7 @@ function renderActions(){
     tr.style.background=isPI?'rgba(248,113,113,.04)':'';
     tr.innerHTML=`
       <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].qui=this.value;sj('action_rows',actionRows)"></td>
-      <td><input value="${esc(row.date)}" placeholder="jj/mm/aaaa" ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].date=this.value;sj('action_rows',actionRows)"></td>
+      <td><input type="date" value="${__dateToISO(row.date)}" ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} onchange="actionRows[${i}].date=__dateFromISO(this.value);sj('action_rows',actionRows)"></td>
       <td>
         ${isPI?`<span style="font-size:.7rem;color:var(--danger);font-family:'DM Mono',monospace;margin-right:6px;vertical-align:middle">⚠ ${esc(row._pi)}</span>`:''}
         <input value="${esc(row.action)}" placeholder="Description de l'action..." ${isPI?'style="border-color:rgba(248,113,113,.3)"':''} oninput="actionRows[${i}].action=this.value;sj('action_rows',actionRows)">
@@ -586,7 +601,7 @@ function renderPIActions(label){
     row.innerHTML=`
       <input class="pi-action-input" placeholder="Description de l'action..." value="${esc(a.action||'')}" oninput="updatePIAction('${label}',${i},'action',this.value)">
       <input class="pi-action-who" placeholder="Responsable" value="${esc(a.qui||'')}" oninput="updatePIAction('${label}',${i},'qui',this.value)">
-      <input class="pi-action-who" placeholder="Date" value="${esc(a.date||'')}" oninput="updatePIAction('${label}',${i},'date',this.value)">
+      <input class="pi-action-who" type="date" value="${__dateToISO(a.date||'')}" onchange="updatePIAction('${label}',${i},'date',__dateFromISO(this.value))">
       <button class="pi-btn-del" onclick="delPIAction('${label}',${i})">✕</button>`;
     container.appendChild(row);
   });

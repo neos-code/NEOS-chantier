@@ -8,6 +8,7 @@
 <title>Suivi de Chantier</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+input[type="date"]{color-scheme:dark}
 :root {
   --bg:#0f1117; --panel:#181c28; --card:#1e2335; --border:#2a3050;
   --accent:#f0b429; --accent2:#38bdf8; --ok:#34d399; --danger:#f87171;
@@ -185,7 +186,7 @@ select.field-input option{background:var(--card)}
 
 <!-- TABS -->
 <div class="tabs">
-  <button class="tab-btn active" id="tab-entete" onclick="switchTab('entete')">📋 En-tête</button>
+  <button class="tab-btn active" id="tab-entete" onclick="switchTab('entete')">📋 Général</button>
   <button class="tab-btn" id="tab-actions" onclick="switchTab('actions')">📋 Actions <span id="actions-count" style="font-size:.7rem;opacity:.6"></span></button>
 </div>
 
@@ -199,7 +200,7 @@ select.field-input option{background:var(--card)}
       <div class="card-body">
         <div class="field-row"><span class="field-label">N° de rapport (auto)</span><div class="rapnum-display" id="f_rapnum"></div></div>
         <div class="field-row"><span class="field-label">Technicien</span><input class="field-input" id="f_technicien" value="" oninput="s('technicien',this.value);updateProgress()"></div>
-        <div class="field-row"><span class="field-label">Date</span><input class="field-input" id="f_date" value="" oninput="s('date',this.value);updateProgress()"></div>
+        <div class="field-row"><span class="field-label">Date</span><input class="field-input" type="date" id="f_date" value="" onchange="s('date',__dateFromISO(this.value));updateProgress()"></div>
       </div>
     </div>
     <div class="card">
@@ -267,6 +268,20 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 function s(k,v){try{localStorage.setItem(PFX+k,v)}catch(e){}}
 function g(k,def=''){try{const v=localStorage.getItem(PFX+k);return v!==null?v:def}catch(e){return def}}
+
+/* ═══ DATES (conversion FR <-> ISO pour le sélecteur natif) ═══ */
+function __dateToISO(str){
+  if(!str) return '';
+  const m = String(str).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m) return '';
+  return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+}
+function __dateFromISO(iso){
+  if(!iso) return '';
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return '';
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
 function sj(k,v){try{localStorage.setItem(PFX+k,JSON.stringify(v))}catch(e){}}
 function gj(k,def){try{const v=localStorage.getItem(PFX+k);return v?JSON.parse(v):def}catch(e){return def}}
 
@@ -359,7 +374,7 @@ function renderActions(){
       <div class="action-card-top">
         <div>
           <div class="ac-label">Date</div>
-          <input class="ac-input" id="ac-date-${a.id}" value="${esc(a.date)}" placeholder="jj/mm/aaaa" oninput="updateAction(${a.id},'date',this.value)">
+          <input class="ac-input" type="date" id="ac-date-${a.id}" value="${__dateToISO(a.date)}" onchange="updateAction(${a.id},'date',__dateFromISO(this.value))">
         </div>
         <div>
           <div class="ac-label">Responsable</div>
@@ -501,7 +516,7 @@ async function exportPDF(){
     doc.setDrawColor(26,122,138); doc.setLineWidth(0.6);
     doc.line(marginX,y,pageW-marginX,y); y+=8;
 
-    sectionTitle('En-tête');
+    sectionTitle('Général');
     addField('Localisation / GPS', g('localisation'));
     addField('Nom du client', g('client'));
     addField('Puissance (kWc)', g('puissance'));
@@ -582,7 +597,7 @@ function esc(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt
 /* ═══ LOAD ═══ */
 function loadFields(){
   const map={
-    f_technicien:'technicien', f_date:'date', f_projet:'projet',
+    f_technicien:'technicien', f_projet:'projet',
     f_localisation:'localisation', f_client:'client', f_puissance:'puissance',
     f_semaine:'semaine', f_observations:'observations'
   };
@@ -592,6 +607,8 @@ function loadFields(){
     if(el.tagName==='TEXTAREA')el.value=g(key);
     else el.value=g(key);
   });
+  const dateEl=document.getElementById('f_date');
+  if(dateEl)dateEl.value=__dateToISO(g('date'));
   const ti=document.getElementById('f_type_install');
   if(ti)ti.value=g('type_install','');
   const tp=document.getElementById('f_type_projet');
