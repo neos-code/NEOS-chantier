@@ -832,6 +832,7 @@ const SECTIONS = [
       { id:"utilisation",   label:"Utilisation souhaitée",      type:"select", options:["Autoconsommation","Vente totale","Autoconso + revente surplus"] },
       { id:"point_injection",label:"Point d'injection",         type:"text" },
       { id:"pdl_client",    label:"PDL client",                 type:"text" },
+      { id:"etude_structure",label:"Etude de structure disponible", type:"yesno" },
     ]},
     { title:"Installation & Dimensionnement", fields:[
       { id:"type_projet",   label:"Type de projet",             type:"select", options:["Toiture","Ombrière","Sol","Autre"] },
@@ -862,12 +863,15 @@ const SECTIONS = [
     { title:"Accès et logistique", fields:[
       { id:"stockage",      label:"Stockage sur site",         type:"yesno" },
       { id:"acces_toit",    label:"Accès au toit",             type:"select", options:["Facile","Difficile","Impossible"] },
-      { id:"dechargement",  label:"Moyen de déchargement",     type:"yesno" },
+      { id:"dechargement",  label:"Moyen de déchargement",     type:"select", options:["Neos","Sous-traitant","Transporteur","Client"] },
+      { id:"resp_dechargement",label:"Responsable déchargement", type:"select", options:["Neos","Sous-traitant","Client"] },
+      { id:"engin_travaux", label:"Engin travaux",             type:"select", options:["Télescopique","Nacelle"] },
+      { id:"resp_engin_travaux",label:"Responsable engin travaux", type:"select", options:["Neos","Sous-traitant","Client"] },
     ]},
     { title:"Moyens nécessaires", fields:[
       { id:"materiel_spec", label:"Matériel spécifique",       type:"text" },
       { id:"poids_lourd",   label:"Accès poids lourd",         type:"yesno" },
-      { id:"dechets",       label:"Traitement des déchets",    type:"text" },
+      { id:"dechets",       label:"Benne disponible sur place",type:"yesno" },
     ]},
     { title:"Commentaire", fields:[
       { id:"commentaire_acc", label:"Commentaire accessibilité", type:"memo" },
@@ -948,24 +952,25 @@ const SECTIONS = [
     ]},
     { title:"PDL", fields:[
       { id:"nouveau_pdl",    label:"Créer nouveau PDL",          type:"yesno" },
-      { id:"secu_eclairage", label:"Sécurité éclairage",         type:"yesno" },
       { id:"dist_transfo",   label:"Distance transformateur (m)",type:"text" },
       { id:"comment_pdl",    label:"Commentaire(s)",             type:"memo" },
     ]},
     { title:"Câblage AC/DC", fields:[
-      { id:"video_ac",       label:"Vidéo passage câbles AC",    type:"yesno" },
-      { id:"video_dc",       label:"Vidéo passage câbles DC",    type:"yesno" },
+      { id:"video_ac",       label:"Photo passage câbles AC",    type:"yesno" },
+      { id:"video_dc",       label:"Photo passage câbles DC",    type:"yesno" },
       { id:"dist_dc",        label:"Distance câble DC (m)",      type:"text" },
       { id:"dist_ac",        label:"Distance câble AC (m)",      type:"text" },
       { id:"chemin_cable",   label:"Chemin de câble existant",   type:"yesno" },
       { id:"gaine_enterree", label:"Gaine enterrée",             type:"yesno" },
+      { id:"dist_gaine",     label:"Distance gaine",             type:"text" },
     ]},
     { title:"Schémas & Terre", fields:[
+      { id:"schema_principe",label:"Schéma de principe",         type:"yesno" },
       { id:"schema_ac",      label:"Schéma AC réalisé",          type:"yesno" },
       { id:"schema_dc",      label:"Schéma DC réalisé",          type:"yesno" },
       { id:"regard_terre",   label:"Mise à la terre",            type:"yesno" },
       { id:"photos_regard",  label:"Photos mise à la terre",     type:"yesno" },
-      { id:"etat_regard",    label:"Etat de la mise à la terre",  type:"text" },
+      { id:"etat_regard",    label:"Etat de la mise à la terre",  type:"select", options:["Neuf","Très bon","Bon","Mauvais"] },
     ]},
     { title:"Groupe électrogène", fields:[
       { id:"groupe_elec",    label:"Groupe électrogène",         type:"yesno" },
