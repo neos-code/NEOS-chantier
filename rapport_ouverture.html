@@ -52,6 +52,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .section-card-body{padding:18px 20px}
 .field-row{display:grid;grid-template-columns:240px 1fr;align-items:start;gap:10px 16px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)}
 .field-row:last-child{border-bottom:none}
+.yesno{display:flex;gap:8px;padding-top:2px}
+.yesno label{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.82rem;color:var(--muted);padding:6px 14px;border:1px solid var(--border);border-radius:6px;transition:all .12s;user-select:none}
+.yesno input[type=radio]{display:none}
+.yesno input[type=radio]:checked + span{color:var(--text)}
+.yesno label:has(input:checked){border-color:var(--accent);color:var(--text);background:rgba(240,180,41,.08)}
 .field-label{font-size:.82rem;color:var(--muted);padding-top:8px;font-weight:500}
 .field-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;padding:7px 11px;outline:none;transition:border-color .15s}
 .field-input:focus{border-color:var(--accent)}
@@ -345,8 +350,7 @@ function switchPage(idx){
 function updateProgress(){
   const fields=['rapport_num','technicien','date','projet_nom','localisation','client_nom',
     'puissance','type_installation','type_projet','rappel_projet','date_demarrage',
-    'duree_travaux_estimee','date_mes_st','date_mes_neos','points_specifiques',
-    'prochaine_reunion','date_prochaine_reunion'];
+    'duree_travaux_estimee','remise_dtp','dtp_complet','points_specifiques','date_prochaine_reunion'];
   const filled=fields.filter(id=>(g(id)||'').trim()).length;
   const pct=Math.round(filled/fields.length*100);
   document.getElementById('progress-fill').style.width=pct+'%';
@@ -402,9 +406,15 @@ function buildContent(){
     <div class="field-row"><span class="field-label">Rappel du projet</span><textarea class="field-input" style="min-height:110px" id="f_rappel_projet" oninput="s('rappel_projet',this.value);updateProgress()">${esc(g('rappel_projet'))}</textarea></div>
     <div class="field-row"><span class="field-label">Date de démarrage chantier</span><input class="field-input" type="date" id="f_date_demarrage" value="${__dateToISO(g('date_demarrage'))}" onchange="s('date_demarrage',__dateFromISO(this.value));updateProgress()"></div>
     <div class="field-row"><span class="field-label">Durée des travaux estimée</span><input class="field-input" id="f_duree_travaux_estimee" value="${esc(g('duree_travaux_estimee'))}" oninput="s('duree_travaux_estimee',this.value);updateProgress()"></div>
-    <div class="field-row"><span class="field-label">Date de mise en service sous-traitant</span><input class="field-input" type="date" id="f_date_mes_st" value="${__dateToISO(g('date_mes_st'))}" onchange="s('date_mes_st',__dateFromISO(this.value));updateProgress()"></div>
-    <div class="field-row"><span class="field-label">Date de mise en service NEOS</span><input class="field-input" type="date" id="f_date_mes_neos" value="${__dateToISO(g('date_mes_neos'))}" onchange="s('date_mes_neos',__dateFromISO(this.value));updateProgress()"></div>
-    <div class="field-row"><span class="field-label">Points spécifiques</span><textarea class="field-input" style="min-height:110px" id="f_points_specifiques" oninput="s('points_specifiques',this.value);updateProgress()">${esc(g('points_specifiques'))}</textarea></div>
+    <div class="field-row"><span class="field-label">Remise DTP</span><div class="yesno">
+      <label><input type="radio" name="f_remise_dtp" value="Oui" ${g('remise_dtp')==='Oui'?'checked':''} onchange="s('remise_dtp','Oui');updateProgress()"><span>✔ Oui</span></label>
+      <label><input type="radio" name="f_remise_dtp" value="Non" ${g('remise_dtp')==='Non'?'checked':''} onchange="s('remise_dtp','Non');updateProgress()"><span>✘ Non</span></label>
+    </div></div>
+    <div class="field-row"><span class="field-label">DTP complet</span><div class="yesno">
+      <label><input type="radio" name="f_dtp_complet" value="Oui" ${g('dtp_complet')==='Oui'?'checked':''} onchange="s('dtp_complet','Oui');updateProgress()"><span>✔ Oui</span></label>
+      <label><input type="radio" name="f_dtp_complet" value="Non" ${g('dtp_complet')==='Non'?'checked':''} onchange="s('dtp_complet','Non');updateProgress()"><span>✘ Non</span></label>
+    </div></div>
+    <div class="field-row"><span class="field-label">Commentaire libre</span><textarea class="field-input" style="min-height:110px" id="f_points_specifiques" oninput="s('points_specifiques',this.value);updateProgress()">${esc(g('points_specifiques'))}</textarea></div>
   `));
 
   /* Points importants */
@@ -430,7 +440,6 @@ function buildContent(){
     </div>`;
   p4.appendChild(actCard);
   p4.appendChild(card('📅 Prochaine réunion',`
-    <div class="field-row"><span class="field-label">Prochaine réunion</span><input class="field-input" id="f_prochaine_reunion" value="${esc(g('prochaine_reunion','À définir'))}" oninput="s('prochaine_reunion',this.value);updateProgress()"></div>
     <div class="field-row"><span class="field-label">Date</span><input class="field-input" type="date" id="f_date_prochaine_reunion" value="${__dateToISO(g('date_prochaine_reunion'))}" onchange="s('date_prochaine_reunion',__dateFromISO(this.value));updateProgress()"></div>
     <div class="field-row"><span class="field-label">Rédigé par</span><input class="field-input" id="f_redige_par" value="${esc(g('redige_par','Khalil NEFFATI'))}" oninput="s('redige_par',this.value)"></div>
   `));
@@ -781,9 +790,9 @@ async function exportPDF(){
     addField('Rappel du projet', g('rappel_projet'));
     addField('Date de démarrage chantier', g('date_demarrage'));
     addField('Durée des travaux estimée', g('duree_travaux_estimee'));
-    addField('Date de mise en service sous-traitant', g('date_mes_st'));
-    addField('Date de mise en service NEOS', g('date_mes_neos'));
-    addField('Points spécifiques', g('points_specifiques'));
+    addField('Remise DTP', g('remise_dtp'));
+    addField('DTP complet', g('dtp_complet'));
+    addField('Commentaire libre', g('points_specifiques'));
 
     sectionTitle('Points importants');
     PI_POINTS.forEach(label=>{
@@ -811,7 +820,6 @@ async function exportPDF(){
     });
 
     sectionTitle('Prochaine réunion');
-    addField('Prochaine réunion', g('prochaine_reunion','À définir'));
     addField('Date', g('date_prochaine_reunion'));
     addField('Rédigé par', g('redige_par'));
 
