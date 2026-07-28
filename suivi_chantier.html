@@ -598,6 +598,21 @@ function loadFields(){
   if(tp)tp.value=g('type_projet','');
 }
 
+/* ═══ PRÉ-REMPLISSAGE DEPUIS LE PROJET ═══ */
+function __seedFromProject(){
+  const map = {
+    projet:       __params.get('p_nom'),
+    client:       __params.get('p_client'),
+    localisation: __params.get('p_localisation'),
+    puissance:    __params.get('p_puissance'),
+    type_projet:  __params.get('p_type_projet'),
+    type_install: __params.get('p_type_installation'),
+  };
+  Object.entries(map).forEach(([key,val])=>{
+    if(val && !g(key)) s(key,val);
+  });
+}
+
 /* ═══ INIT ═══ */
 (function init(){
   if(!localStorage.getItem(PFX+'counter'))localStorage.setItem(PFX+'counter','1');
@@ -605,6 +620,7 @@ function loadFields(){
   if(!g('date'))s('date',new Date().toLocaleDateString('fr-FR'));
   // Default technicien
   if(!g('technicien'))s('technicien','Khalil NEFFATI');
+  __seedFromProject();
   loadFields();
   updateRapNum();
   updateProgress();

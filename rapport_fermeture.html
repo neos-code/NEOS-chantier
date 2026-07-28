@@ -1104,6 +1104,21 @@ function doReset() {
   showToast(`✔ Nouveau rapport — N° ${String(n).padStart(2,'0')}`);
 }
 
+/* ═══ PRÉ-REMPLISSAGE DEPUIS LE PROJET ═══ */
+function __seedFromProject(){
+  const map = {
+    projet_nom:       __params.get('p_nom'),
+    client_nom:       __params.get('p_client'),
+    localisation:     __params.get('p_localisation'),
+    puissance:        __params.get('p_puissance'),
+    type_projet:      __params.get('p_type_projet'),
+    type_installation:__params.get('p_type_installation'),
+  };
+  Object.entries(map).forEach(([key,val])=>{
+    if(val && !g(key)) s(key,val);
+  });
+}
+
 /* ═══ TOAST ═══ */
 function showToast(msg, d=2800) {
   const t = document.getElementById('toast');
@@ -1118,6 +1133,7 @@ function esc(str) {
 /* ═══ INIT ═══ */
 (function init() {
   if (!localStorage.getItem(PFX+'rapnum_counter')) localStorage.setItem(PFX+'rapnum_counter','1');
+  __seedFromProject();
   buildNav();
   buildContent();
   switchPage(0);

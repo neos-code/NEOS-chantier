@@ -1706,9 +1706,31 @@ function doReset() {
 }
 
 /* ═══════════════════════════════════════════
+   PRÉ-REMPLISSAGE DEPUIS LE PROJET
+   Note : dans ce document, le champ "type_projet" correspond en réalité
+   au TYPE D'INSTALLATION (Toiture/Ombrière/Sol/Autre), et le champ
+   "utilisation" correspond au TYPE DE PROJET (Autoconsommation/Vente
+   totale...) — c'est inversé par rapport aux autres documents.
+═══════════════════════════════════════════ */
+function __seedFromProject(){
+  const map = {
+    projet_nom:   __params.get('p_nom'),
+    client_nom:   __params.get('p_client'),
+    localisation: __params.get('p_localisation'),
+    puissance:    __params.get('p_puissance'),
+    utilisation:  __params.get('p_type_projet'),
+    type_projet:  __params.get('p_type_installation'),
+  };
+  Object.entries(map).forEach(([key,val])=>{
+    if(val && !loadVal(key)) saveVal(key,val);
+  });
+}
+
+/* ═══════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════ */
 (function init() {
+  __seedFromProject();
   loadPhotos();
   buildNav();
   buildContent();

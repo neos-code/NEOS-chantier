@@ -74,6 +74,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .modal-field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:6px;font-weight:500}
 .modal-field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;padding:9px 11px;outline:none}
 .modal-field input:focus{border-color:var(--accent)}
+.modal-field select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;padding:9px 11px;outline:none}
+.modal-field select:focus{border-color:var(--accent)}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
 
 .toast{position:fixed;bottom:20px;right:20px;left:20px;max-width:340px;margin:0 auto;background:var(--card);border:1px solid var(--ok);color:var(--ok);padding:10px 18px;border-radius:8px;font-size:.83rem;font-weight:500;z-index:9999;opacity:0;transform:translateY(10px);transition:all .22s;pointer-events:none;text-align:center}
@@ -106,6 +108,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="modal-field">
       <label>Localisation</label>
       <input type="text" id="np-localisation" placeholder="Ex : Orvault (44)">
+    </div>
+    <div class="modal-field">
+      <label>Puissance prévue (kWc)</label>
+      <input type="text" id="np-puissance" placeholder="Ex : 100">
+    </div>
+    <div class="modal-field">
+      <label>Type de projet</label>
+      <select id="np-type-projet">
+        <option value="">— Choisir —</option>
+        <option>Autoconsommation</option>
+        <option>Vente totale</option>
+        <option>Autoconso + revente surplus</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Type d'installation</label>
+      <select id="np-type-installation">
+        <option value="">— Choisir —</option>
+        <option>Toiture</option>
+        <option>Ombrière</option>
+        <option>Sol</option>
+        <option>Autre</option>
+      </select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-project')">Annuler</button>
@@ -284,6 +309,9 @@ function openNewProjectModal(){
   document.getElementById('np-nom').value='';
   document.getElementById('np-client').value='';
   document.getElementById('np-localisation').value='';
+  document.getElementById('np-puissance').value='';
+  document.getElementById('np-type-projet').value='';
+  document.getElementById('np-type-installation').value='';
   openModal('modal-project');
   setTimeout(()=>document.getElementById('np-nom').focus(),50);
 }
@@ -296,6 +324,9 @@ function createProject(){
     nom,
     client: document.getElementById('np-client').value.trim(),
     localisation: document.getElementById('np-localisation').value.trim(),
+    puissance: document.getElementById('np-puissance').value.trim(),
+    typeProjet: document.getElementById('np-type-projet').value,
+    typeInstallation: document.getElementById('np-type-installation').value,
     createdAt: Date.now()
   };
   const projects = getProjects();
@@ -359,7 +390,21 @@ function openDocument(docId){
   const doc = getDocuments().find(d=>d.id===docId);
   if(!doc) return;
   const type = DOC_TYPES.find(t=>t.key===doc.type);
-  const url = `${type.file}?project=${encodeURIComponent(doc.projectId)}&doc=${encodeURIComponent(doc.id)}&label=${encodeURIComponent(doc.label)}`;
+  const project = getProjects().find(p=>p.id===doc.projectId);
+  const params = new URLSearchParams({
+    project: doc.projectId,
+    doc: doc.id,
+    label: doc.label
+  });
+  if(project){
+    if(project.nom) params.set('p_nom', project.nom);
+    if(project.client) params.set('p_client', project.client);
+    if(project.localisation) params.set('p_localisation', project.localisation);
+    if(project.puissance) params.set('p_puissance', project.puissance);
+    if(project.typeProjet) params.set('p_type_projet', project.typeProjet);
+    if(project.typeInstallation) params.set('p_type_installation', project.typeInstallation);
+  }
+  const url = `${type.file}?${params.toString()}`;
   location.href = url;
 }
 
