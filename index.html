@@ -106,7 +106,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <!-- MODAL: nouveau projet -->
 <div class="modal-overlay" id="modal-project">
   <div class="modal-box">
-    <h2>Nouveau projet / chantier</h2>
+    <h2 id="modal-project-title">Nouveau projet / chantier</h2>
     <div class="modal-field">
       <label>Nom du projet *</label>
       <input type="text" id="np-nom" placeholder="Ex : Centrale PV Orvault 3">
@@ -144,7 +144,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-project')">Annuler</button>
-      <button class="btn btn-accent" onclick="createProject()">Créer</button>
+      <button class="btn btn-accent" id="modal-project-submit" onclick="createProject()">Créer</button>
     </div>
   </div>
 </div>
@@ -279,9 +279,13 @@ function renderProjectDetail(pid){
       <div class="project-meta">
         ${project.client ? `<span>👤 Client : <b>${esc(project.client)}</b></span>` : ''}
         ${project.localisation ? `<span>📍 <b>${esc(project.localisation)}</b></span>` : ''}
+        ${project.puissance ? `<span>⚡ <b>${esc(project.puissance)} kWc</b></span>` : ''}
+        ${project.typeProjet ? `<span>🔌 <b>${esc(project.typeProjet)}</b></span>` : ''}
+        ${project.typeInstallation ? `<span>🏗 <b>${esc(project.typeInstallation)}</b></span>` : ''}
         <span>📅 Créé le <b>${new Date(project.createdAt).toLocaleDateString('fr-FR')}</b></span>
       </div>
       <div class="project-header-actions">
+        <button class="btn btn-ghost" onclick="openEditProjectModal('${project.id}')">✎ Modifier</button>
         <button class="btn btn-danger-outline" onclick="askDeleteProject('${project.id}')">🗑 Supprimer le projet</button>
       </div>
     </div>
@@ -356,7 +360,11 @@ function renderDocSection(type, docs, project){
 function esc(str){ return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 /* ═══ PROJECT CRUD ═══ */
+let pendingEditProjectId = null;
 function openNewProjectModal(){
+  pendingEditProjectId = null;
+  document.getElementById('modal-project-title').textContent = 'Nouveau projet / chantier';
+  document.getElementById('modal-project-submit').textContent = 'Créer';
   document.getElementById('np-nom').value='';
   document.getElementById('np-client').value='';
   document.getElementById('np-localisation').value='';
@@ -367,20 +375,46 @@ function openNewProjectModal(){
   setTimeout(()=>document.getElementById('np-nom').focus(),50);
 }
 
+function openEditProjectModal(id){
+  const project = getProjects().find(p=>p.id===id);
+  if(!project) return;
+  pendingEditProjectId = id;
+  document.getElementById('modal-project-title').textContent = 'Modifier le projet';
+  document.getElementById('modal-project-submit').textContent = 'Enregistrer';
+  document.getElementById('np-nom').value = project.nom || '';
+  document.getElementById('np-client').value = project.client || '';
+  document.getElementById('np-localisation').value = project.localisation || '';
+  document.getElementById('np-puissance').value = project.puissance || '';
+  document.getElementById('np-type-projet').value = project.typeProjet || '';
+  document.getElementById('np-type-installation').value = project.typeInstallation || '';
+  openModal('modal-project');
+  setTimeout(()=>document.getElementById('np-nom').focus(),50);
+}
+
 function createProject(){
   const nom = document.getElementById('np-nom').value.trim();
   if(!nom){ showToast('⚠ Le nom du projet est obligatoire'); return; }
-  const project = {
-    id: uid(),
+  const fields = {
     nom,
     client: document.getElementById('np-client').value.trim(),
     localisation: document.getElementById('np-localisation').value.trim(),
     puissance: document.getElementById('np-puissance').value.trim(),
     typeProjet: document.getElementById('np-type-projet').value,
     typeInstallation: document.getElementById('np-type-installation').value,
-    createdAt: Date.now()
   };
   const projects = getProjects();
+  if(pendingEditProjectId){
+    const idx = projects.findIndex(p=>p.id===pendingEditProjectId);
+    if(idx>=0){
+      projects[idx] = { ...projects[idx], ...fields };
+      saveProjects(projects);
+      closeModal('modal-project');
+      showToast('✔ Projet mis à jour');
+      render();
+    }
+    return;
+  }
+  const project = { id: uid(), ...fields, createdAt: Date.now() };
   projects.push(project);
   saveProjects(projects);
   closeModal('modal-project');
