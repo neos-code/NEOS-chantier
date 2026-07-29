@@ -6,15 +6,15 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="theme-color" content="#15223b">
+<meta name="theme-color" content="#ffffff">
 <title>Suivi de Chantier</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 input[type="date"]{color-scheme:dark}
 :root {
-  --bg:#15223b; --panel:#17223b; --card:#1c2b47; --border:#2c3e5e;
-  --accent:#104d5e; --accent2:#75b0b6; --ok:#75b0b6; --danger:#e24c18;
-  --text:#e2e8f0; --muted:#64748b; --radius:10px; --shadow:0 4px 24px rgba(0,0,0,.4);
+  --bg:#ffffff; --panel:#f4f5f7; --card:#fafbfc; --border:#e2e5ea;
+  --accent:#104d5e; --accent2:#75b0b6; --ok:#16a34a; --danger:#dc2626;
+  --text:#17223b; --muted:#64748b; --radius:10px; --shadow:0 4px 24px rgba(23,34,59,.08);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:15px}
@@ -30,10 +30,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .progress-label{font-size:.7rem;color:var(--muted);font-family:'DM Mono',monospace}
 .topbar-right{display:flex;gap:8px;align-items:center}
 .btn-sm{padding:7px 14px;border:none;border-radius:7px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s}
-.btn-export{background:var(--accent);color:#000}
+.btn-export{background:var(--accent);color:#fff}
 .btn-export:hover{opacity:.85}
 .btn-reset{background:transparent;color:var(--danger);border:1px solid var(--danger)}
-.btn-reset:hover{background:rgba(226,76,24,.1)}
+.btn-reset:hover{background:rgba(220,38,38,.1)}
 
 /* ═══ TABS ═══ */
 .tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--border);padding:0 24px;gap:4px}
@@ -66,7 +66,7 @@ select.field-input option{background:var(--card)}
 /* ═══ ACTIONS TABLE ═══ */
 .actions-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .actions-header h2{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--text)}
-.btn-add{padding:8px 16px;background:var(--accent);color:#000;border:none;border-radius:7px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;gap:6px}
+.btn-add{padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;gap:6px}
 .btn-add:hover{opacity:.85}
 
 .action-card{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;transition:border-color .15s}
@@ -81,13 +81,13 @@ select.field-input option{background:var(--card)}
 .ac-textarea:focus{border-color:var(--accent)}
 
 .btn-del-card{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.85rem;transition:all .15s;align-self:center}
-.btn-del-card:hover{border-color:var(--danger);color:var(--danger);background:rgba(226,76,24,.08)}
+.btn-del-card:hover{border-color:var(--danger);color:var(--danger);background:rgba(220,38,38,.08)}
 
 /* ═══ STATUS BADGE ═══ */
 .status-select{appearance:none;-webkit-appearance:none;padding:5px 10px 5px 8px;border-radius:6px;font-size:.75rem;font-family:'Syne',sans-serif;font-weight:700;border:none;cursor:pointer;outline:none}
 .status-encours{background:rgba(117,176,182,.15);color:var(--accent2)}
-.status-fait{background:rgba(117,176,182,.15);color:var(--ok)}
-.status-bloque{background:rgba(226,76,24,.15);color:var(--danger)}
+.status-fait{background:rgba(22,163,74,.15);color:var(--ok)}
+.status-bloque{background:rgba(220,38,38,.15);color:var(--danger)}
 .status-attente{background:rgba(16,77,94,.12);color:var(--accent)}
 
 /* ═══ PHOTOS ═══ */
@@ -100,7 +100,7 @@ select.field-input option{background:var(--card)}
 .photo-thumb:hover .photo-thumb-del{opacity:1}
 .photo-add-btns{display:flex;flex-direction:column;gap:5px}
 .btn-photo-cam,.btn-photo-gal{padding:5px 10px;border-radius:6px;font-size:.73rem;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;transition:all .12s;white-space:nowrap}
-.btn-photo-cam{background:var(--accent);color:#000;border:none;font-weight:600}
+.btn-photo-cam{background:var(--accent);color:#fff;border:none;font-weight:600}
 .btn-photo-cam:hover{opacity:.85}
 .btn-photo-gal{background:transparent;border:1px solid var(--border);color:var(--text)}
 .btn-photo-gal:hover{border-color:var(--accent2);color:var(--accent2)}

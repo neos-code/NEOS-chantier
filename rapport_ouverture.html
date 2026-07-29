@@ -6,15 +6,15 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="theme-color" content="#15223b">
+<meta name="theme-color" content="#ffffff">
 <title>Rapport Ouverture Chantier</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 input[type="date"]{color-scheme:dark}
 :root {
-  --bg:#15223b; --panel:#17223b; --card:#1c2b47; --border:#2c3e5e;
-  --accent:#104d5e; --accent2:#75b0b6; --ok:#75b0b6; --danger:#e24c18;
-  --text:#e2e8f0; --muted:#64748b; --radius:10px; --shadow:0 4px 24px rgba(0,0,0,.4);
+  --bg:#ffffff; --panel:#f4f5f7; --card:#fafbfc; --border:#e2e5ea;
+  --accent:#104d5e; --accent2:#75b0b6; --ok:#16a34a; --danger:#dc2626;
+  --text:#17223b; --muted:#64748b; --radius:10px; --shadow:0 4px 24px rgba(23,34,59,.08);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:15px;scroll-behavior:smooth}
@@ -31,12 +31,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .nav-btn.active{background:var(--card);color:var(--accent)}
 .nav-icon{font-size:1rem;width:20px;text-align:center}
 .sidebar-footer{padding:14px 10px;border-top:1px solid var(--border)}
-.btn-export{width:100%;padding:11px;background:var(--accent);color:#000;border:none;border-radius:var(--radius);font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:opacity .15s,transform .1s}
+.btn-export{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:opacity .15s,transform .1s}
 .btn-back{width:100%;padding:10px;background:transparent;border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-bottom:8px;transition:all .15s}
 .btn-back:hover{border-color:var(--accent2);color:var(--accent2)}
 .btn-export:hover{opacity:.88;transform:translateY(-1px)}
 .btn-reset{width:100%;margin-top:8px;padding:9px;background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:var(--radius);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s}
-.btn-reset:hover{background:rgba(226,76,24,.1)}
+.btn-reset:hover{background:rgba(220,38,38,.1)}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .topbar{background:var(--panel);border-bottom:1px solid var(--border);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .topbar-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text)}
@@ -92,7 +92,7 @@ select.field-input option{background:var(--card)}
 .photo-cat-card.has-photo{border-color:var(--ok)}
 .photo-cat-header{padding:11px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:rgba(117,176,182,.04)}
 .photo-cat-title{font-size:.85rem;font-weight:600;color:var(--text)}
-.photo-cat-count{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--ok);background:rgba(117,176,182,.12);padding:2px 8px;border-radius:20px;display:none}
+.photo-cat-count{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--ok);background:rgba(22,163,74,.12);padding:2px 8px;border-radius:20px;display:none}
 .photo-cat-count.show{display:block}
 .photo-thumbs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;min-height:0}
 .photo-thumb-wrap{position:relative;width:72px;height:72px;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
@@ -100,7 +100,7 @@ select.field-input option{background:var(--card)}
 .photo-thumb-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
 .photo-thumb-wrap:hover .photo-thumb-del{opacity:1}
 .photo-cat-actions{padding:8px 12px 12px;display:flex;gap:8px}
-.btn-photo-cam{flex:1;padding:8px 6px;border-radius:7px;border:1px solid var(--accent);background:var(--accent);color:#000;font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:'DM Sans',sans-serif;font-weight:600;transition:opacity .15s}
+.btn-photo-cam{flex:1;padding:8px 6px;border-radius:7px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:'DM Sans',sans-serif;font-weight:600;transition:opacity .15s}
 .btn-photo-cam:hover{opacity:.85}
 .btn-photo-gal{flex:1;padding:8px 6px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:'DM Sans',sans-serif;transition:all .12s}
 .btn-photo-gal:hover{border-color:var(--accent2);color:var(--accent2)}
@@ -113,19 +113,19 @@ select.field-input option{background:var(--card)}
 .pi-ras,.pi-reserve{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.8rem;cursor:pointer;transition:all .12s;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .pi-ras:hover{border-color:var(--ok);color:var(--ok)}
 .pi-reserve:hover{border-color:var(--danger);color:var(--danger)}
-.pi-ras.active{border-color:var(--ok);color:var(--ok);background:rgba(117,176,182,.1)}
-.pi-reserve.active{border-color:var(--danger);color:var(--danger);background:rgba(226,76,24,.1)}
+.pi-ras.active{border-color:var(--ok);color:var(--ok);background:rgba(22,163,74,.1)}
+.pi-reserve.active{border-color:var(--danger);color:var(--danger);background:rgba(220,38,38,.1)}
 .pi-comment{background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;padding:7px 10px;outline:none;width:100%;transition:border-color .15s}
 .pi-comment:focus{border-color:var(--accent2)}
 .pi-wrap{padding:4px 0}
-.pi-reserve-panel{display:none;margin-top:8px;padding:12px 14px;background:rgba(226,76,24,.06);border:1px solid rgba(226,76,24,.25);border-radius:8px;flex-direction:column;gap:8px}
+.pi-reserve-panel{display:none;margin-top:8px;padding:12px 14px;background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.25);border-radius:8px;flex-direction:column;gap:8px}
 .pi-reserve-panel.show{display:flex}
 .pi-reserve-title{font-size:.75rem;color:var(--danger);font-weight:700;letter-spacing:.4px;text-transform:uppercase}
 .pi-action-item{display:grid;grid-template-columns:1fr 120px 100px 28px;gap:6px;align-items:center}
-.pi-action-input,.pi-action-who{background:var(--bg);border:1px solid rgba(226,76,24,.3);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;padding:6px 9px;outline:none;width:100%;transition:border-color .15s}
+.pi-action-input,.pi-action-who{background:var(--bg);border:1px solid rgba(220,38,38,.3);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;padding:6px 9px;outline:none;width:100%;transition:border-color .15s}
 .pi-action-input:focus,.pi-action-who:focus{border-color:var(--danger)}
-.pi-btn-add-action{align-self:flex-start;padding:5px 12px;background:transparent;border:1px dashed rgba(226,76,24,.4);border-radius:6px;color:var(--danger);font-size:.75rem;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
-.pi-btn-add-action:hover{background:rgba(226,76,24,.08)}
+.pi-btn-add-action{align-self:flex-start;padding:5px 12px;background:transparent;border:1px dashed rgba(220,38,38,.4);border-radius:6px;color:var(--danger);font-size:.75rem;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.pi-btn-add-action:hover{background:rgba(220,38,38,.08)}
 .pi-btn-del{background:transparent;border:none;color:var(--danger);font-size:.85rem;cursor:pointer;opacity:.5;padding:2px 4px;border-radius:4px}
 .pi-btn-del:hover{opacity:1}
 @media(max-width:700px){
@@ -183,8 +183,9 @@ select.field-input option{background:var(--card)}
   .sidebar-footer{padding:4px 6px;border-top:none;border-left:1px solid var(--border);display:flex;align-items:center;gap:4px}
   .btn-back{width:auto;margin-bottom:0;padding:8px;font-size:0}
   .btn-back::before{content:"←";font-size:1.1rem}
-  .btn-export,.btn-reset{width:auto;margin:0;padding:8px 12px;font-size:.75rem}
-  .btn-export::before,.btn-reset::before{content:none}
+  .btn-export{width:auto;margin:0;padding:8px 12px;font-size:.75rem}
+  .btn-reset{width:auto;margin:0;padding:8px;font-size:0}
+  .btn-reset::before{content:"🗑";font-size:1.1rem}
   .main{order:1;overflow:visible;flex:none;min-height:0}
   .topbar{height:48px;padding:0 14px;position:sticky;top:0;z-index:100}
   .topbar-title{font-size:.95rem}
@@ -620,13 +621,13 @@ function renderActions(){
   actionRows.forEach(row=>{
     const isPI=!!row.linkedKey;
     const tr=document.createElement('tr');
-    tr.style.background=isPI?'rgba(226,76,24,.04)':'';
+    tr.style.background=isPI?'rgba(220,38,38,.04)':'';
     tr.innerHTML=`
-      <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isPI?'style="border-color:rgba(226,76,24,.3)"':''} oninput="updateSharedAction('${row.id}','qui',this.value)"></td>
-      <td><input type="date" value="${__dateToISO(row.date)}" ${isPI?'style="border-color:rgba(226,76,24,.3)"':''} onchange="updateSharedAction('${row.id}','date',__dateFromISO(this.value))"></td>
+      <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isPI?'style="border-color:rgba(220,38,38,.3)"':''} oninput="updateSharedAction('${row.id}','qui',this.value)"></td>
+      <td><input type="date" value="${__dateToISO(row.date)}" ${isPI?'style="border-color:rgba(220,38,38,.3)"':''} onchange="updateSharedAction('${row.id}','date',__dateFromISO(this.value))"></td>
       <td>
         ${isPI?`<span style="font-size:.7rem;color:var(--danger);font-family:'DM Mono',monospace;margin-right:6px;vertical-align:middle">⚠ ${esc(row.linkedLabel)}</span>`:''}
-        <input value="${esc(row.action)}" placeholder="Description de l'action..." ${isPI?'style="border-color:rgba(226,76,24,.3)"':''} oninput="updateSharedAction('${row.id}','action',this.value)">
+        <input value="${esc(row.action)}" placeholder="Description de l'action..." ${isPI?'style="border-color:rgba(220,38,38,.3)"':''} oninput="updateSharedAction('${row.id}','action',this.value)">
       </td>
       <td>
         <select class="action-status-select" onchange="updateSharedAction('${row.id}','statut',this.value)">
