@@ -300,7 +300,7 @@ function renderProjectActionsTable(pid){
       ${actions.length ? `
       <div style="overflow-x:auto">
         <table class="actions-table">
-          <thead><tr><th>Qui</th><th>Date</th><th>Action</th><th>Statut</th><th>Origine</th></tr></thead>
+          <thead><tr><th>Qui</th><th>Date</th><th>Action</th><th>Statut</th><th>Origine</th><th style="width:36px"></th></tr></thead>
           <tbody>
             ${actions.map(a=>`
               <tr>
@@ -316,6 +316,7 @@ function renderProjectActionsTable(pid){
                   </select>
                 </td>
                 <td class="action-source">${esc(a.sourceLabel)||'—'}</td>
+                <td><button class="icon-btn" onclick="askDeleteProjectAction('${pid}','${a.id}')" title="Supprimer cette action">✕</button></td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -487,11 +488,27 @@ function doDeleteDocument(){
   const id = pendingDeleteDocId;
   Object.keys(localStorage).filter(k=>k.startsWith('doc_'+id+'_')).forEach(k=>localStorage.removeItem(k));
   saveDocuments(getDocuments().filter(d=>d.id!==id));
-  // Ne retire que les actions AUTOMATIQUES (liées à une réserve) de ce document précis —
-  // les actions manuelles appartiennent au projet et restent visibles ailleurs.
-  saveProjectActions(JSON.parse(localStorage.getItem('neos_project_actions')||'[]').filter(a=>!(a.sourceDocId===id && a.linkedKey)));
+  // Les actions appartiennent au projet, pas au document : elles restent
+  // dans le "Suivi des actions" même si le document qui les a créées est
+  // supprimé. Seule une suppression manuelle depuis ce tableau les retire.
   closeModal('modal-confirm');
   showToast('✔ Document supprimé');
+  render();
+}
+
+let pendingDeleteActionId = null, pendingDeleteActionProjectId = null;
+function askDeleteProjectAction(projectId, actionId){
+  pendingDeleteActionProjectId = projectId;
+  pendingDeleteActionId = actionId;
+  document.getElementById('confirm-text').textContent = 'Supprimer cette action du suivi ?';
+  document.getElementById('confirm-btn').onclick = doDeleteProjectAction;
+  openModal('modal-confirm');
+}
+function doDeleteProjectAction(){
+  const all = JSON.parse(localStorage.getItem('neos_project_actions')||'[]');
+  saveProjectActions(all.filter(a=>a.id!==pendingDeleteActionId));
+  closeModal('modal-confirm');
+  showToast('✔ Action supprimée du suivi');
   render();
 }
 
