@@ -4,14 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f1117">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#15223b">
 <title>Suivi de Chantier</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 input[type="date"]{color-scheme:dark}
 :root {
-  --bg:#0f1117; --panel:#181c28; --card:#1e2335; --border:#2a3050;
-  --accent:#f0b429; --accent2:#38bdf8; --ok:#34d399; --danger:#f87171;
+  --bg:#15223b; --panel:#17223b; --card:#1c2b47; --border:#2c3e5e;
+  --accent:#104d5e; --accent2:#75b0b6; --ok:#75b0b6; --danger:#e24c18;
   --text:#e2e8f0; --muted:#64748b; --radius:10px; --shadow:0 4px 24px rgba(0,0,0,.4);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -31,7 +33,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .btn-export{background:var(--accent);color:#000}
 .btn-export:hover{opacity:.85}
 .btn-reset{background:transparent;color:var(--danger);border:1px solid var(--danger)}
-.btn-reset:hover{background:rgba(248,113,113,.1)}
+.btn-reset:hover{background:rgba(226,76,24,.1)}
 
 /* ═══ TABS ═══ */
 .tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--border);padding:0 24px;gap:4px}
@@ -46,7 +48,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 /* ═══ CARDS ═══ */
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
-.card-header{padding:12px 18px;border-bottom:1px solid var(--border);background:rgba(56,189,248,.05)}
+.card-header{padding:12px 18px;border-bottom:1px solid var(--border);background:rgba(117,176,182,.05)}
 .card-header h3{font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;color:var(--accent2)}
 .card-body{padding:16px 18px}
 
@@ -79,14 +81,14 @@ select.field-input option{background:var(--card)}
 .ac-textarea:focus{border-color:var(--accent)}
 
 .btn-del-card{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.85rem;transition:all .15s;align-self:center}
-.btn-del-card:hover{border-color:var(--danger);color:var(--danger);background:rgba(248,113,113,.08)}
+.btn-del-card:hover{border-color:var(--danger);color:var(--danger);background:rgba(226,76,24,.08)}
 
 /* ═══ STATUS BADGE ═══ */
 .status-select{appearance:none;-webkit-appearance:none;padding:5px 10px 5px 8px;border-radius:6px;font-size:.75rem;font-family:'Syne',sans-serif;font-weight:700;border:none;cursor:pointer;outline:none}
-.status-encours{background:rgba(56,189,248,.15);color:var(--accent2)}
-.status-fait{background:rgba(52,211,153,.15);color:var(--ok)}
-.status-bloque{background:rgba(248,113,113,.15);color:var(--danger)}
-.status-attente{background:rgba(240,180,41,.12);color:var(--accent)}
+.status-encours{background:rgba(117,176,182,.15);color:var(--accent2)}
+.status-fait{background:rgba(117,176,182,.15);color:var(--ok)}
+.status-bloque{background:rgba(226,76,24,.15);color:var(--danger)}
+.status-attente{background:rgba(16,77,94,.12);color:var(--accent)}
 
 /* ═══ PHOTOS ═══ */
 .photos-wrap{margin-top:10px}
@@ -152,7 +154,7 @@ select.field-input option{background:var(--card)}
   .print-header{display:block!important}
   .card,.action-card{background:#fff!important;border:1px solid #ccc!important;page-break-inside:avoid}
   .card-header{background:#e0f4f8!important}
-  .card-header h3{color:#1a7a8a!important}
+  .card-header h3{color:#104d5e!important}
   .field-label{color:#555!important}
   .field-input,textarea.field-input,.ac-input,.ac-textarea{background:#fafafa!important;border:1px solid #ccc!important;color:#111!important}
   .__print-hide{display:none!important}
@@ -180,7 +182,7 @@ select.field-input option{background:var(--card)}
   </div>
   <div class="topbar-right">
     <button class="btn-sm btn-export" onclick="exportPDF()">⬇ <span>Exporter PDF</span></button>
-    <button class="btn-sm btn-reset" onclick="confirmReset()">🗑 <span>Vider</span></button>
+    <button class="btn-sm btn-reset" onclick="confirmReset()">🗑 <span>Vider ce rapport</span></button>
   </div>
 </div>
 
@@ -222,7 +224,6 @@ select.field-input option{background:var(--card)}
             <option>Autoconsommation</option><option>Vente totale</option><option>Autoconso + revente surplus</option>
           </select>
         </div>
-        <div class="field-row"><span class="field-label">Numéro de semaine</span><input class="field-input" id="f_semaine" value="" oninput="s('semaine',this.value);updateProgress()" placeholder="ex: S22"></div>
         <div class="field-row"><span class="field-label">Observations générales</span><textarea class="field-input" id="f_observations" oninput="s('observations',this.value)"></textarea></div>
       </div>
     </div>
@@ -535,7 +536,7 @@ async function exportPDF(){
     const checkBreak=(needed)=>{ if(y+needed>bottomLimit){ doc.addPage(); y=20; } };
     const sectionTitle=(t)=>{
       checkBreak(10);
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(26,122,138);
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(16,77,94);
       doc.text(t, marginX, y); y+=3;
       doc.setDrawColor(210,210,210); doc.setLineWidth(0.2);
       doc.line(marginX,y,pageW-marginX,y); y+=5;
@@ -560,12 +561,12 @@ async function exportPDF(){
 
     const proj=g('projet')||'\u2014', tech=g('technicien')||'\u2014', date=g('date')||'\u2014';
     const rapnum=buildRapNum()||'\u2014';
-    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(26,122,138);
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(16,77,94);
     doc.text('SUIVI DE CHANTIER', marginX, y); y+=6;
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(85,85,85);
     doc.text(`N° : ${rapnum}`, marginX, y); y+=5;
     doc.text(`Projet : ${proj}   |   Technicien : ${tech}   |   Date : ${date}`, marginX, y); y+=4;
-    doc.setDrawColor(26,122,138); doc.setLineWidth(0.6);
+    doc.setDrawColor(16,77,94); doc.setLineWidth(0.6);
     doc.line(marginX,y,pageW-marginX,y); y+=8;
 
     sectionTitle('Général');
@@ -574,7 +575,6 @@ async function exportPDF(){
     addField('Puissance (kWc)', g('puissance'));
     addField("Type d'installation", g('type_install'));
     addField('Type de projet', g('type_projet'));
-    addField('Numéro de semaine', g('semaine'));
     addField('Observations générales', g('observations'));
 
     sectionTitle('Actions');
@@ -584,7 +584,7 @@ async function exportPDF(){
     }
     for(const a of actions){
       checkBreak(14);
-      doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(26,122,138);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(16,77,94);
       doc.text(`Action — ${a.date||'\u2014'} — ${a.qui||'\u2014'} — ${__STATUT_LABELS[a.statut]||a.statut||'\u2014'}`, marginX, y);
       y+=5;
       doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(15,15,15);
@@ -651,7 +651,7 @@ function loadFields(){
   const map={
     f_technicien:'technicien', f_projet:'projet',
     f_localisation:'localisation', f_client:'client', f_puissance:'puissance',
-    f_semaine:'semaine', f_observations:'observations'
+    f_observations:'observations'
   };
   Object.entries(map).forEach(([elId,key])=>{
     const el=document.getElementById(elId);

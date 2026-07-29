@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f1117">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#15223b">
 <title>Rapport Visite Technique</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -13,14 +15,14 @@ input[type="date"]{color-scheme:dark}
    VARIABLES & RESET
 ═══════════════════════════════════════════ */
 :root {
-  --bg:        #0f1117;
-  --panel:     #181c28;
-  --card:      #1e2335;
-  --border:    #2a3050;
-  --accent:    #f0b429;
-  --accent2:   #38bdf8;
-  --ok:        #34d399;
-  --danger:    #f87171;
+  --bg:        #15223b;
+  --panel:     #17223b;
+  --card:      #1c2b47;
+  --border:    #2c3e5e;
+  --accent:    #104d5e;
+  --accent2:   #75b0b6;
+  --ok:        #75b0b6;
+  --danger:    #e24c18;
   --text:      #e2e8f0;
   --muted:     #64748b;
   --radius:    10px;
@@ -263,7 +265,7 @@ select.field-input option { background: var(--card); }
 }
 .yesno input[type=radio] { display: none; }
 .yesno input[type=radio]:checked + span { color: var(--text); }
-.yesno label:has(input:checked) { border-color: var(--accent); color: var(--text); background: rgba(240,180,41,.08); }
+.yesno label:has(input:checked) { border-color: var(--accent); color: var(--text); background: rgba(16,77,94,.08); }
 
 /* ═══════════════════════════════════════════
    PHOTOS PAGE
@@ -294,7 +296,7 @@ select.field-input option { background: var(--card); }
   font-size: .7rem;
   font-weight: 500;
   color: var(--accent);
-  background: rgba(240,180,41,.1);
+  background: rgba(16,77,94,.1);
   padding: 2px 7px;
   border-radius: 4px;
 }
@@ -343,7 +345,7 @@ select.field-input option { background: var(--card); }
 .btn-photo.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
 .btn-photo.primary:hover { opacity: .85; }
 .btn-photo.danger { border-color: var(--danger); color: var(--danger); }
-.btn-photo.danger:hover { background: rgba(248,113,113,.1); }
+.btn-photo.danger:hover { background: rgba(226,76,24,.1); }
 .photo-actions-row { display: flex; gap: 8px; }
 .photo-actions-row .btn-photo { flex: 1; }
 .photo-comment {
@@ -512,7 +514,7 @@ select.field-input option { background: var(--card); }
     page-break-inside: avoid;
   }
   .section-card-header { background: #f5f5f5 !important; border-bottom: 1px solid #ddd !important; }
-  .section-card-header h3 { color: #1a4a8a !important; }
+  .section-card-header h3 { color: #104d5e !important; }
   .field-label { color: #555 !important; }
   .field-input, select.field-input, textarea.field-input {
     background: #fafafa !important;
@@ -539,7 +541,7 @@ select.field-input option { background: var(--card); }
   }
   .__print-hide { display: none !important; }
   .yesno label { border-color: #ccc !important; color: #555 !important; }
-  .yesno label:has(input:checked) { background: #e8f0fe !important; border-color: #1a4a8a !important; color: #111 !important; }
+  .yesno label:has(input:checked) { background: #e8f0fe !important; border-color: #104d5e !important; color: #111 !important; }
 
   /* print photos */
   .print-photos { display: block !important; }
@@ -595,7 +597,7 @@ select.field-input option { background: var(--card); }
   cursor: pointer;
   transition: all .15s;
 }
-.btn-reset:hover { background: rgba(248,113,113,.1); }
+.btn-reset:hover { background: rgba(226,76,24,.1); }
 
 /* modal reset */
 .modal-overlay {
@@ -790,10 +792,10 @@ select.field-input option { background: var(--card); }
   <div class="modal-box annotate-box">
     <h2>✏️ Annoter la photo</h2>
     <div class="annotate-toolbar">
-      <button class="color-dot" data-color="#f87171" style="background:#f87171" onclick="setDrawColor('#f87171')" title="Rouge"></button>
-      <button class="color-dot" data-color="#f0b429" style="background:#f0b429" onclick="setDrawColor('#f0b429')" title="Jaune"></button>
-      <button class="color-dot" data-color="#38bdf8" style="background:#38bdf8" onclick="setDrawColor('#38bdf8')" title="Bleu"></button>
-      <button class="color-dot" data-color="#34d399" style="background:#34d399" onclick="setDrawColor('#34d399')" title="Vert"></button>
+      <button class="color-dot" data-color="#ff3b30" style="background:#ff3b30" onclick="setDrawColor('#ff3b30')" title="Rouge"></button>
+      <button class="color-dot" data-color="#ffcc00" style="background:#ffcc00" onclick="setDrawColor('#ffcc00')" title="Jaune"></button>
+      <button class="color-dot" data-color="#0a84ff" style="background:#0a84ff" onclick="setDrawColor('#0a84ff')" title="Bleu"></button>
+      <button class="color-dot" data-color="#34c759" style="background:#34c759" onclick="setDrawColor('#34c759')" title="Vert"></button>
       <button class="color-dot" data-color="#ffffff" style="background:#ffffff" onclick="setDrawColor('#ffffff')" title="Blanc"></button>
       <button class="btn-clear" onclick="clearAnnotations()">↺ Effacer le dessin</button>
     </div>
@@ -1380,7 +1382,7 @@ let annotateLabel = null;
 let annotateCtx = null;
 let annotateDrawing = false;
 let annotateLast = null;
-let annotateColor = '#f87171';
+let annotateColor = '#e24c18';
 
 function scaledDims(w, h, maxDim) {
   if (Math.max(w, h) <= maxDim) return { w, h };
@@ -1558,7 +1560,7 @@ async function exportPDF() {
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
-    doc.setTextColor(26, 74, 138);
+    doc.setTextColor(16, 77, 94);
     doc.text('RAPPORT VISITE TECHNIQUE', marginX, y);
     y += 6;
     doc.setFont('helvetica', 'normal');
@@ -1568,7 +1570,7 @@ async function exportPDF() {
     y += 5;
     doc.text(`Projet : ${proj}   |   Technicien : ${tech}   |   Date : ${date}`, marginX, y);
     y += 4;
-    doc.setDrawColor(26, 74, 138);
+    doc.setDrawColor(16, 77, 94);
     doc.setLineWidth(0.6);
     doc.line(marginX, y, pageW - marginX, y);
     y += 8;
@@ -1578,7 +1580,7 @@ async function exportPDF() {
         checkBreak(10);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
-        doc.setTextColor(26, 74, 138);
+        doc.setTextColor(16, 77, 94);
         doc.text(`${section.title} \u2014 ${group.title}`, marginX, y);
         y += 3;
         doc.setDrawColor(210, 210, 210);
@@ -1624,7 +1626,7 @@ async function exportPDF() {
       y = 20;
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
-      doc.setTextColor(26, 74, 138);
+      doc.setTextColor(16, 77, 94);
       doc.text('PHOTOS', marginX, y);
       y += 9;
 
