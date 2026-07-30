@@ -135,6 +135,21 @@ body {
   transition: all .15s;
 }
 .btn-back:hover { border-color: var(--accent2); color: var(--accent2); }
+.btn-reset {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  font-family: 'Syne', sans-serif;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-reset:hover { background: rgba(220,38,38,.1); }
 
 /* main */
 .main {
@@ -584,22 +599,6 @@ select.field-input option { background: var(--card); }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-.btn-reset {
-  width: 100%;
-  margin-top: 8px;
-  padding: 9px;
-  background: transparent;
-  color: var(--danger);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius);
-  font-family: 'Syne', sans-serif;
-  font-size: .78rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all .15s;
-}
-.btn-reset:hover { background: rgba(220,38,38,.1); }
 
 /* modal reset */
 .modal-overlay {

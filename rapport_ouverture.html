@@ -379,6 +379,7 @@ function switchPage(idx){
   });
   document.getElementById('topbar-title').textContent=PAGES[idx].title;
   currentPage=idx; updateProgress();
+  if(PAGES[idx].id==='actions') refreshActions();
 }
 
 /* ═══ PROGRESS ═══ */
