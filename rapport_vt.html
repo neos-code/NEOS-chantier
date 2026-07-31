@@ -1320,6 +1320,22 @@ function loadPhotos() {
    EXPORT PDF (génération directe, sans passer par
    l'impression du navigateur — plus fiable sur mobile)
 ═══════════════════════════════════════════ */
+// Les polices standard de jsPDF ne savent afficher que les caractères latins
+// classiques (Windows-1252). Un emoji ou un caractère spécial tapé dans un
+// champ (commentaire, nom...) produisait des caractères corrompus, voire
+// faisait planter l'export. On nettoie systématiquement tout texte avant
+// de l'envoyer au PDF : les accents français restent intacts, le reste
+// (emoji, symboles exotiques...) est simplement retiré.
+function __pdfSafe(str){
+  str = (str===null || str===undefined) ? '' : String(str);
+  const safeExtras = new Set(['\u2013','\u2014','\u2018','\u2019','\u201C','\u201D','\u2026']);
+  let out = '';
+  for (const ch of str) {
+    const code = ch.codePointAt(0);
+    if (code <= 0xFF || safeExtras.has(ch)) out += ch;
+  }
+  return out;
+}
 function __loadImageDims(dataUrl){
   return new Promise((resolve) => {
     const img = new Image();
@@ -1344,10 +1360,10 @@ async function exportPDF() {
       if (y + needed > bottomLimit) { doc.addPage(); y = 20; }
     };
 
-    const proj = loadVal('projet_nom') || '\u2014';
-    const tech = loadVal('technicien') || '\u2014';
-    const date = loadVal('date') || new Date().toLocaleDateString('fr-FR');
-    const rapnum = buildRapNum() || '\u2014';
+    const proj = __pdfSafe(loadVal('projet_nom') || '\u2014');
+    const tech = __pdfSafe(loadVal('technicien') || '\u2014');
+    const date = __pdfSafe(loadVal('date') || new Date().toLocaleDateString('fr-FR'));
+    const rapnum = __pdfSafe(buildRapNum() || '\u2014');
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
@@ -1405,7 +1421,7 @@ async function exportPDF() {
             }
             if (v.comment) {
               doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); doc.setTextColor(80, 80, 80);
-              const cLines = doc.splitTextToSize(`Commentaire : ${v.comment}`, contentW);
+              const cLines = doc.splitTextToSize(__pdfSafe(`Commentaire : ${v.comment}`), contentW);
               checkBreak(cLines.length * 4);
               doc.text(cLines, marginX, y);
               y += cLines.length * 4;
@@ -1414,7 +1430,7 @@ async function exportPDF() {
             continue;
           }
           const raw = loadVal(field.id);
-          const val = (raw && String(raw).trim()) ? String(raw) : '\u2014';
+          const val = (raw && String(raw).trim()) ? __pdfSafe(raw) : '\u2014';
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
           doc.setTextColor(60, 60, 60);

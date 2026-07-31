@@ -515,6 +515,22 @@ function delPhoto(id,idx){
    EXPORT PDF (génération directe, sans passer par
    l'impression du navigateur — plus fiable sur mobile)
 ═══════════════════════════════════════════ */
+// Les polices standard de jsPDF ne savent afficher que les caractères latins
+// classiques (Windows-1252). Un emoji ou un caractère spécial tapé dans un
+// champ (commentaire, nom...) produisait des caractères corrompus, voire
+// faisait planter l'export. On nettoie systématiquement tout texte avant
+// de l'envoyer au PDF : les accents français restent intacts, le reste
+// (emoji, symboles exotiques...) est simplement retiré.
+function __pdfSafe(str){
+  str = (str===null || str===undefined) ? '' : String(str);
+  const safeExtras = new Set(['\u2013','\u2014','\u2018','\u2019','\u201C','\u201D','\u2026']);
+  let out = '';
+  for (const ch of str) {
+    const code = ch.codePointAt(0);
+    if (code <= 0xFF || safeExtras.has(ch)) out += ch;
+  }
+  return out;
+}
 function __loadImageDims(dataUrl){
   return new Promise((resolve) => {
     const img = new Image();
@@ -542,7 +558,8 @@ async function exportPDF(){
       doc.line(marginX,y,pageW-marginX,y); y+=5;
     };
     const addField=(label,val)=>{
-      const value=(val&&String(val).trim())?String(val):'\u2014';
+      const value=(val&&String(val).trim())?__pdfSafe(val):'\u2014';
+      label = __pdfSafe(label);
       doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(60,60,60);
       const labelText=label+' :';
       doc.text(labelText, marginX, y);
@@ -559,8 +576,8 @@ async function exportPDF(){
       y += Math.max(lines.length*4.3,4.3)+1.8;
     };
 
-    const proj=g('projet')||'\u2014', tech=g('technicien')||'\u2014', date=g('date')||'\u2014';
-    const rapnum=buildRapNum()||'\u2014';
+    const proj=__pdfSafe(g('projet')||'\u2014'), tech=__pdfSafe(g('technicien')||'\u2014'), date=__pdfSafe(g('date')||'\u2014');
+    const rapnum=__pdfSafe(buildRapNum()||'\u2014');
     doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(16,77,94);
     doc.text('SUIVI DE CHANTIER', marginX, y); y+=6;
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(85,85,85);
@@ -585,10 +602,10 @@ async function exportPDF(){
     for(const a of actions){
       checkBreak(14);
       doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(16,77,94);
-      doc.text(`Action — ${a.date||'\u2014'} — ${a.qui||'\u2014'} — ${__STATUT_LABELS[a.statut]||a.statut||'\u2014'}`, marginX, y);
+      doc.text(__pdfSafe(`Action — ${a.date||'\u2014'} — ${a.qui||'\u2014'} — ${__STATUT_LABELS[a.statut]||a.statut||'\u2014'}`), marginX, y);
       y+=5;
       doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(15,15,15);
-      const lines=doc.splitTextToSize(a.quoi&&a.quoi.trim()?a.quoi:'\u2014', contentW);
+      const lines=doc.splitTextToSize(__pdfSafe(a.quoi&&a.quoi.trim()?a.quoi:'\u2014'), contentW);
       checkBreak(lines.length*4.3+2);
       doc.text(lines, marginX, y); y+=lines.length*4.3+3;
 
