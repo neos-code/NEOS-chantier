@@ -903,7 +903,7 @@ async function exportPDF(){
 
     sectionTitle('Participants présents');
     for(let i=1;i<=5;i++){
-      const p=g('participant_'+i);
+      const p=g('participant_'+i, i===1?'NEOS\nKhalil NEFFATI':'');
       const sig=g('signature_'+i);
       if(!(p && p.trim()) && !sig) continue;
       addField('Participant '+i, p.replace(/\n/g,' — '));

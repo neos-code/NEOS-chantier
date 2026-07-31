@@ -117,6 +117,10 @@ select.field-input option { background: var(--card); }
   color: var(--text); font-family: 'DM Sans', sans-serif; font-size: .8rem;
   resize: none; outline: none; min-height: 60px; line-height: 1.5;
 }
+.sig-label { font-size: .68rem; color: var(--muted); margin: 6px 0 3px; display: flex; align-items: center; justify-content: space-between; }
+.sig-clear { background: transparent; border: none; color: var(--accent2); font-size: .68rem; cursor: pointer; text-decoration: underline; padding: 0; }
+.sig-canvas-wrap { background: #fff; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; touch-action: none; }
+.sig-canvas { width: 100%; height: 70px; display: block; cursor: crosshair; }
 
 /* ═══ RETOUR OUVRAGE ═══ */
 .retour-row {
@@ -525,6 +529,7 @@ function switchPage(idx) {
   currentPage = idx;
   updateProgress();
   if (PAGES[idx].id === 'actions') refreshActions();
+  if (PAGES[idx].id === 'participants') setTimeout(resizeAllSignaturePads, 0);
 }
 
 /* ═══ PROGRESS ═══ */
@@ -736,9 +741,74 @@ function buildParticipants() {
   for (let i = 1; i <= 5; i++) {
     const d = document.createElement('div');
     d.className = 'participant-card';
-    d.innerHTML = `<label>Participant ${i}</label><textarea placeholder="Société&#10;Nom Prénom" oninput="s('participant_${i}',this.value)">${esc(g('participant_'+i))}</textarea>`;
+    d.innerHTML = `<label>Participant ${i}</label><textarea placeholder="Société&#10;Nom Prénom" oninput="s('participant_${i}',this.value)">${esc(g('participant_'+i, i===1?'NEOS\nKhalil NEFFATI':''))}</textarea>
+      <div class="sig-label"><span>Signature</span><button class="sig-clear" onclick="clearSignature(${i})">Effacer</button></div>
+      <div class="sig-canvas-wrap"><canvas class="sig-canvas" id="sig-${i}"></canvas></div>`;
     grid.appendChild(d);
   }
+  for (let i = 1; i <= 5; i++) initSignaturePad(i);
+}
+
+/* ═══ SIGNATURE PAD ═══ */
+const __sigState = {};
+function initSignaturePad(i){
+  const canvas = document.getElementById('sig-'+i);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  __sigState[i] = { drawing:false, ctx, canvas, sized:false };
+
+  const getPos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const point = e.touches ? e.touches[0] : e;
+    return { x: point.clientX - r.left, y: point.clientY - r.top };
+  };
+  const start = (e) => { e.preventDefault(); resizeSignaturePad(i); const st=__sigState[i]; st.drawing=true; const p=getPos(e); st.ctx.beginPath(); st.ctx.moveTo(p.x,p.y); };
+  const move = (e) => { const st=__sigState[i]; if(!st.drawing) return; e.preventDefault(); const p=getPos(e); st.ctx.lineTo(p.x,p.y); st.ctx.stroke(); };
+  const end = () => { const st=__sigState[i]; if(!st.drawing) return; st.drawing=false; s('signature_'+i, canvas.toDataURL('image/png')); };
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, {passive:false});
+  canvas.addEventListener('touchmove', move, {passive:false});
+  canvas.addEventListener('touchend', end);
+}
+
+// Le canvas doit être redimensionné une fois que sa page est réellement
+// visible (display:block) — avant ça, getBoundingClientRect() renvoie 0.
+function resizeSignaturePad(i){
+  const st = __sigState[i];
+  if(!st) return;
+  const canvas = st.canvas;
+  const rect = canvas.getBoundingClientRect();
+  if(rect.width < 5) return;
+  const ratio = window.devicePixelRatio || 1;
+  const targetW = Math.round(rect.width * ratio);
+  const targetH = Math.round(rect.height * ratio);
+  if(st.sized && canvas.width === targetW && canvas.height === targetH) return;
+
+  const saved = g('signature_'+i);
+  canvas.width = targetW;
+  canvas.height = targetH;
+  st.ctx.scale(ratio, ratio);
+  st.ctx.lineWidth = 2;
+  st.ctx.lineCap = 'round';
+  st.ctx.strokeStyle = '#111';
+  st.sized = true;
+  if(saved){
+    const img = new Image();
+    img.onload = () => st.ctx.drawImage(img, 0, 0, rect.width, rect.height);
+    img.src = saved;
+  }
+}
+function resizeAllSignaturePads(){
+  for(let i=1;i<=5;i++) resizeSignaturePad(i);
+}
+function clearSignature(i){
+  const st = __sigState[i];
+  if(!st) return;
+  st.ctx.clearRect(0,0,st.canvas.width,st.canvas.height);
+  s('signature_'+i, '');
 }
 
 /* ═══ SYNC RESERVE → ACTIONS ═══ */
@@ -992,8 +1062,22 @@ async function exportPDF() {
 
     sectionTitle('Participants présents');
     for(let i=1;i<=5;i++){
-      const p=g('participant_'+i);
-      if(p && p.trim()) addField('Participant '+i, p.replace(/\n/g,' — '));
+      const p=g('participant_'+i, i===1?'NEOS\nKhalil NEFFATI':'');
+      const sig=g('signature_'+i);
+      if(!(p && p.trim()) && !sig) continue;
+      addField('Participant '+i, p.replace(/\n/g,' — '));
+      if(sig){
+        const dims = await __loadImageDims(sig);
+        let imgW=45, imgH=15;
+        if(dims.w && dims.h){ imgH = imgW * (dims.h/dims.w); if(imgH>20){ imgH=20; imgW=imgH*(dims.w/dims.h); } }
+        checkBreak(imgH+6);
+        doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
+        doc.text('Signature :', marginX, y); y+=3;
+        try {
+          doc.addImage(sig, 'PNG', marginX, y, imgW, imgH);
+          y += imgH+4;
+        } catch(e){ y+=4; }
+      }
     }
 
     sectionTitle('Points de la réunion');
