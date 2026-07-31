@@ -1,4 +1,4 @@
-const CACHE_NAME = 'neos-chantier-v8';
+const CACHE_NAME = 'neos-chantier-v9';
 const ASSETS = [
   './index.html',
   './suivi_chantier.html',

@@ -352,13 +352,14 @@ function switchPage(idx){
   });
   currentPage=idx; updateProgress();
   if(PAGES[idx].id==='actions') refreshActions();
+  if(PAGES[idx].id==='participants') setTimeout(resizeAllSignaturePads, 0);
 }
 
 /* ═══ PROGRESS ═══ */
 function updateProgress(){
   const fields=['rapport_num','technicien','date','projet_nom','localisation','client_nom',
     'puissance','type_installation','type_projet','rappel_projet','date_demarrage',
-    'duree_travaux_estimee','remise_dtp','dtp_complet','points_specifiques','date_prochaine_reunion'];
+    'duree_travaux_estimee','remise_dtp','points_specifiques','date_prochaine_reunion'];
   const filled=fields.filter(id=>(g(id)||'').trim()).length;
   const pct=Math.round(filled/fields.length*100);
   document.getElementById('progress-fill').style.width=pct+'%';
@@ -391,7 +392,7 @@ function buildContent(){
     <div class="field-row"><span class="field-label">Type de projet</span>
       <select class="field-input" id="f_type_projet" onchange="s('type_projet',this.value);updateProgress()">
         <option value="">— Choisir —</option>
-        ${['Autoconsommation','Vente totale','Autoconso + revente surplus'].map(o=>`<option ${g('type_projet')===o?'selected':''}>${o}</option>`).join('')}
+        ${['Autoconsommation','Vente totale'].map(o=>`<option ${g('type_projet')===o?'selected':''}>${o}</option>`).join('')}
       </select>
     </div>
   `));
@@ -417,10 +418,6 @@ function buildContent(){
     <div class="field-row"><span class="field-label">Remise DTP</span><div class="yesno">
       <label><input type="radio" name="f_remise_dtp" value="Oui" ${g('remise_dtp')==='Oui'?'checked':''} onchange="s('remise_dtp','Oui');updateProgress()"><span>✔ Oui</span></label>
       <label><input type="radio" name="f_remise_dtp" value="Non" ${g('remise_dtp')==='Non'?'checked':''} onchange="s('remise_dtp','Non');updateProgress()"><span>✘ Non</span></label>
-    </div></div>
-    <div class="field-row"><span class="field-label">DTP complet</span><div class="yesno">
-      <label><input type="radio" name="f_dtp_complet" value="Oui" ${g('dtp_complet')==='Oui'?'checked':''} onchange="s('dtp_complet','Oui');updateProgress()"><span>✔ Oui</span></label>
-      <label><input type="radio" name="f_dtp_complet" value="Non" ${g('dtp_complet')==='Non'?'checked':''} onchange="s('dtp_complet','Non');updateProgress()"><span>✘ Non</span></label>
     </div></div>
     <div class="field-row"><span class="field-label">Commentaire libre</span><textarea class="field-input" style="min-height:110px" id="f_points_specifiques" oninput="s('points_specifiques',this.value);updateProgress()">${esc(g('points_specifiques'))}</textarea></div>
   `));
@@ -534,30 +531,15 @@ const __sigState = {};
 function initSignaturePad(i){
   const canvas = document.getElementById('sig-'+i);
   if(!canvas) return;
-  const ratio = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = Math.max(rect.width,1) * ratio;
-  canvas.height = Math.max(rect.height,1) * ratio;
   const ctx = canvas.getContext('2d');
-  ctx.scale(ratio, ratio);
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = '#111';
-  __sigState[i] = { drawing:false, ctx, canvas };
-
-  const saved = g('signature_'+i);
-  if(saved){
-    const img = new Image();
-    img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
-    img.src = saved;
-  }
+  __sigState[i] = { drawing:false, ctx, canvas, sized:false };
 
   const getPos = (e) => {
     const r = canvas.getBoundingClientRect();
     const point = e.touches ? e.touches[0] : e;
     return { x: point.clientX - r.left, y: point.clientY - r.top };
   };
-  const start = (e) => { e.preventDefault(); const st=__sigState[i]; st.drawing=true; const p=getPos(e); st.ctx.beginPath(); st.ctx.moveTo(p.x,p.y); };
+  const start = (e) => { e.preventDefault(); resizeSignaturePad(i); const st=__sigState[i]; st.drawing=true; const p=getPos(e); st.ctx.beginPath(); st.ctx.moveTo(p.x,p.y); };
   const move = (e) => { const st=__sigState[i]; if(!st.drawing) return; e.preventDefault(); const p=getPos(e); st.ctx.lineTo(p.x,p.y); st.ctx.stroke(); };
   const end = () => { const st=__sigState[i]; if(!st.drawing) return; st.drawing=false; s('signature_'+i, canvas.toDataURL('image/png')); };
 
@@ -567,6 +549,38 @@ function initSignaturePad(i){
   canvas.addEventListener('touchstart', start, {passive:false});
   canvas.addEventListener('touchmove', move, {passive:false});
   canvas.addEventListener('touchend', end);
+}
+
+// Le canvas doit être redimensionné une fois que sa page est réellement
+// visible (display:block) — avant ça, getBoundingClientRect() renvoie 0,
+// ce qui rendait la zone de signature inutilisable.
+function resizeSignaturePad(i){
+  const st = __sigState[i];
+  if(!st) return;
+  const canvas = st.canvas;
+  const rect = canvas.getBoundingClientRect();
+  if(rect.width < 5) return; // page encore cachée, on réessaiera plus tard
+  const ratio = window.devicePixelRatio || 1;
+  const targetW = Math.round(rect.width * ratio);
+  const targetH = Math.round(rect.height * ratio);
+  if(st.sized && canvas.width === targetW && canvas.height === targetH) return;
+
+  const saved = g('signature_'+i);
+  canvas.width = targetW;
+  canvas.height = targetH;
+  st.ctx.scale(ratio, ratio);
+  st.ctx.lineWidth = 2;
+  st.ctx.lineCap = 'round';
+  st.ctx.strokeStyle = '#111';
+  st.sized = true;
+  if(saved){
+    const img = new Image();
+    img.onload = () => st.ctx.drawImage(img, 0, 0, rect.width, rect.height);
+    img.src = saved;
+  }
+}
+function resizeAllSignaturePads(){
+  for(let i=1;i<=5;i++) resizeSignaturePad(i);
 }
 function clearSignature(i){
   const st = __sigState[i];
@@ -895,7 +909,6 @@ async function exportPDF(){
     addField('Date de démarrage chantier', g('date_demarrage'));
     addField('Durée des travaux estimée', g('duree_travaux_estimee'));
     addField('Remise DTP', g('remise_dtp'));
-    addField('DTP complet', g('dtp_complet'));
     addField('Commentaire libre', g('points_specifiques'));
 
     sectionTitle('Points importants');

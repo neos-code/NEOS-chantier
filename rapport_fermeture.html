@@ -565,7 +565,7 @@ function buildContent() {
     <div class="field-row"><span class="field-label">Type de projet</span>
       <select class="field-input" id="f_type_projet" onchange="s('type_projet',this.value);updateProgress()">
         <option value="">— Choisir —</option>
-        ${['Autoconsommation','Vente totale','Autoconso + revente surplus'].map(o=>`<option ${g('type_projet')===o?'selected':''}>${o}</option>`).join('')}
+        ${['Autoconsommation','Vente totale'].map(o=>`<option ${g('type_projet')===o?'selected':''}>${o}</option>`).join('')}
       </select>
     </div>
   `));

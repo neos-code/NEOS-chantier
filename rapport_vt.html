@@ -628,10 +628,11 @@ const SECTIONS = [
   ]},
   { id:"projet", icon:"📍", title:"Projet", groups:[
     { title:"Caractéristiques", fields:[
-      { id:"utilisation",   label:"Utilisation souhaitée",      type:"select", options:["Autoconsommation","Vente totale","Autoconso + revente surplus"] },
-      { id:"point_injection",label:"Point d'injection",         type:"text" },
+      { id:"utilisation",   label:"Utilisation souhaitée",      type:"select", options:["Autoconsommation","Vente totale"] },
+      { id:"point_injection",label:"Point d'injection",         type:"select", options:["TGBT","PDL"] },
       { id:"pdl_client",    label:"PDL client",                 type:"text" },
       { id:"etude_structure",label:"Etude de structure disponible", type:"yesno" },
+      { id:"comment_caracteristiques", label:"Commentaire",     type:"memo" },
     ]},
     { title:"Installation & Dimensionnement", fields:[
       { id:"type_projet",   label:"Type de projet",             type:"select", options:["Toiture","Ombrière","Sol","Autre"] },
@@ -790,8 +791,6 @@ const SECTIONS = [
     ]},
     { title:"Schémas & Terre", fields:[
       { id:"schema_principe",label:"Schéma de principe",         type:"yesno" },
-      { id:"schema_ac",      label:"Schéma AC réalisé",          type:"yesno" },
-      { id:"schema_dc",      label:"Schéma DC réalisé",          type:"yesno" },
       { id:"regard_terre",   label:"Mise à la terre",            type:"yesno" },
       { id:"photos_regard",  label:"Photos mise à la terre",     type:"yesno" },
       { id:"etat_regard",    label:"Etat de la mise à la terre",  type:"select", options:["Neuf","Très bon","Bon","Mauvais"] },
@@ -1367,8 +1366,8 @@ async function exportPDF() {
     doc.line(marginX, y, pageW - marginX, y);
     y += 8;
 
-    SECTIONS.forEach(section => {
-      section.groups.forEach(group => {
+    for (const section of SECTIONS) {
+      for (const group of section.groups) {
         checkBreak(10);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
@@ -1380,8 +1379,40 @@ async function exportPDF() {
         doc.line(marginX, y, pageW - marginX, y);
         y += 5;
 
-        group.fields.forEach(field => {
-          if (field.type === 'photo') return;
+        for (const field of group.fields) {
+          if (field.type === 'photo') {
+            const v = photoData[field.label];
+            if (!v || !v.dataUrl) continue;
+            const dims = await __loadImageDims(v.dataUrl);
+            let imgW = 80, imgH = 60;
+            if (dims.w && dims.h) {
+              imgW = Math.min(contentW, 80); imgH = imgW * (dims.h / dims.w);
+              if (imgH > 65) { imgH = 65; imgW = imgH * (dims.w / dims.h); }
+            }
+            checkBreak(imgH + 12);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(60, 60, 60);
+            doc.text(`📷 ${field.label}`, marginX, y);
+            y += 4;
+            try {
+              const fmt = v.dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+              doc.addImage(v.dataUrl, fmt, marginX, y, imgW, imgH);
+              y += imgH + 2;
+            } catch (e) {
+              doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5);
+              doc.text('(photo non intégrée)', marginX, y); y += 5;
+            }
+            if (v.comment) {
+              doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); doc.setTextColor(80, 80, 80);
+              const cLines = doc.splitTextToSize(`Commentaire : ${v.comment}`, contentW);
+              checkBreak(cLines.length * 4);
+              doc.text(cLines, marginX, y);
+              y += cLines.length * 4;
+            }
+            y += 4;
+            continue;
+          }
           const raw = loadVal(field.id);
           const val = (raw && String(raw).trim()) ? String(raw) : '\u2014';
           doc.setFont('helvetica', 'bold');
@@ -1405,57 +1436,8 @@ async function exportPDF() {
           doc.setTextColor(15, 15, 15);
           doc.text(lines, valX, y);
           y += Math.max(lines.length * 4.3, 4.3) + 1.8;
-        });
+        }
         y += 3;
-      });
-    });
-
-    const photoEntries = PHOTOS
-      .map(label => [label, photoData[label]])
-      .filter(([,v]) => v?.dataUrl);
-    if (photoEntries.length) {
-      doc.addPage();
-      y = 20;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13);
-      doc.setTextColor(16, 77, 94);
-      doc.text('PHOTOS', marginX, y);
-      y += 9;
-
-      for (const [label, v] of photoEntries) {
-        const dims = await __loadImageDims(v.dataUrl);
-        let imgW = contentW, imgH = 70;
-        if (dims.w && dims.h) {
-          imgW = Math.min(contentW, 130);
-          imgH = imgW * (dims.h / dims.w);
-          if (imgH > 100) { imgH = 100; imgW = imgH * (dims.w / dims.h); }
-        }
-        checkBreak(imgH + 14);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
-        doc.setTextColor(20, 20, 20);
-        doc.text(label, marginX, y);
-        y += 4;
-        try {
-          const fmt = v.dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-          doc.addImage(v.dataUrl, fmt, marginX, y, imgW, imgH);
-          y += imgH + 2;
-        } catch (e) {
-          doc.setFont('helvetica', 'italic');
-          doc.setFontSize(8.5);
-          doc.text('(photo non intégrée)', marginX, y);
-          y += 5;
-        }
-        if (v.comment) {
-          doc.setFont('helvetica', 'italic');
-          doc.setFontSize(8.5);
-          doc.setTextColor(80, 80, 80);
-          const cLines = doc.splitTextToSize(`Commentaire : ${v.comment}`, contentW);
-          checkBreak(cLines.length * 4);
-          doc.text(cLines, marginX, y);
-          y += cLines.length * 4;
-        }
-        y += 6;
       }
     }
 
