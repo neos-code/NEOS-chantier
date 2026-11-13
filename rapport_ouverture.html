@@ -8,6 +8,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="theme-color" content="#ffffff">
 <title>Rapport Ouverture Chantier</title>
+<link rel="stylesheet" href="photos.css">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 input[type="date"]{color-scheme:light}
@@ -92,25 +93,6 @@ select.field-input option{background:var(--card)}
 .action-status-select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.76rem;padding:6px 8px;outline:none}
 .btn-del-row:hover{opacity:1}
 
-.photo-section-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:14px}
-.photo-cat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .15s}
-.photo-cat-card.has-photo{border-color:var(--ok)}
-.photo-cat-header{padding:11px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:rgba(117,176,182,.04)}
-.photo-cat-title{font-size:.85rem;font-weight:600;color:var(--text)}
-.photo-cat-count{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--ok);background:rgba(22,163,74,.12);padding:2px 8px;border-radius:20px;display:none}
-.photo-cat-count.show{display:block}
-.photo-thumbs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;min-height:0}
-.photo-thumb-wrap{position:relative;width:72px;height:72px;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
-.photo-thumb-wrap img{width:100%;height:100%;object-fit:cover;display:block}
-.photo-thumb-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
-.photo-thumb-wrap:hover .photo-thumb-del{opacity:1}
-.photo-cat-actions{padding:8px 12px 12px;display:flex;gap:8px}
-.btn-photo-cam{flex:1;padding:8px 6px;border-radius:7px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:'DM Sans',sans-serif;font-weight:600;transition:opacity .15s}
-.btn-photo-cam:hover{opacity:.85}
-.btn-photo-gal{flex:1;padding:8px 6px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:'DM Sans',sans-serif;transition:all .12s}
-.btn-photo-gal:hover{border-color:var(--accent2);color:var(--accent2)}
-.photo-file-hidden{display:none}
-
 /* ═══ POINTS IMPORTANTS ═══ */
 .pi-row{display:grid;grid-template-columns:150px auto auto 1fr;align-items:center;gap:10px 12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04)}
 .pi-row:last-child{border-bottom:none}
@@ -177,14 +159,12 @@ select.field-input option{background:var(--card)}
   .field-row{grid-template-columns:1fr;gap:4px;padding:10px 0}
   .field-label{padding-top:0}
   .participants-grid{grid-template-columns:1fr 1fr}
-  .photo-section-grid{grid-template-columns:1fr}
 }
 
 @media print {
   @page{margin:15mm;size:A4}
   body{background:#fff!important;color:#111!important}
-  .topbar,.tabs,.btn-export,.btn-add-row,.btn-del-row,.btn-reset,
-  .photo-cat-actions,.btn-photo-cam,.btn-photo-gal,.photo-thumb-del{display:none!important}
+  .topbar,.tabs,.btn-export,.btn-add-row,.btn-del-row,.btn-reset{display:none!important}
   .content{overflow:visible!important;padding:0!important;max-width:none!important}
   .page{display:block!important}
   .print-header{display:block!important}
@@ -199,8 +179,6 @@ select.field-input option{background:var(--card)}
   .participant-card{background:#fafafa!important;border:1px solid #ccc!important}
   .participant-card textarea{color:#111!important}
   .actions-table input{background:#fafafa!important;border:1px solid #ccc!important;color:#111!important}
-  .photo-cat-card{background:#fff!important;border:1px solid #ccc!important}
-  .photo-thumb-wrap{border:1px solid #ddd!important}
   .pi-ras.active{background:#e6faf3!important;border-color:#2a9e6a!important;color:#1a6a47!important}
   .pi-reserve.active{background:#fef0f0!important;border-color:#d04040!important;color:#a03030!important}
   .pi-ras:not(.active),.pi-reserve:not(.active){opacity:.3!important}
@@ -243,6 +221,8 @@ select.field-input option{background:var(--card)}
 <div class="toast" id="toast"></div>
 
 <script src="jspdf.umd.min.js"></script>
+<script src="actions.js"></script>
+<script src="photos.js"></script>
 <script>
 const PAGES = [
   { id:'entete',       icon:'📋', title:'Général' },
@@ -294,32 +274,16 @@ function __dateFromISO(iso){
 function sj(id,val){try{localStorage.setItem(PFX+id,JSON.stringify(val))}catch(e){}}
 function gj(id,def){try{const v=localStorage.getItem(PFX+id);return v?JSON.parse(v):def}catch(e){return def}}
 
-/* ═══ TABLEAU D'ACTIONS PARTAGÉ (source unique pour tout le projet) ═══
-   Les actions ne sont plus dupliquées par document : elles vivent dans
-   neos_project_actions et chaque document les lit/écrit en direct.
-   Modifier une action ici la modifie partout (tableau de bord, autres
-   documents du même projet). */
-function getAllProjectActionsRaw(){
-  try{ return JSON.parse(localStorage.getItem('neos_project_actions')||'[]'); }catch(e){ return []; }
-}
-function saveAllProjectActionsRaw(all){
-  try{ localStorage.setItem('neos_project_actions', JSON.stringify(all)); }catch(e){}
-}
-function getProjectActions(){
-  if(!PROJECT_ID) return [];
-  return getAllProjectActionsRaw().filter(a=>a.projectId===PROJECT_ID);
-}
-function upsertProjectAction(patch){
-  const all=getAllProjectActionsRaw();
-  const idx=all.findIndex(a=>a.id===patch.id);
-  if(idx>=0){ all[idx]={...all[idx],...patch,updatedAt:Date.now()}; }
-  else{ all.push({ projectId:PROJECT_ID, statut:'À faire', sourceDocId:DOC_ID, sourceLabel:DOC_LABEL||'Ouverture de chantier', createdAt:Date.now(), updatedAt:Date.now(), ...patch }); }
-  saveAllProjectActionsRaw(all);
-}
-function deleteProjectActionById(id){
-  saveAllProjectActionsRaw(getAllProjectActionsRaw().filter(a=>a.id!==id));
-}
-function newActionId(){ return 'act_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+/* ═══ ACTIONS DU PROJET (voir actions.js) ═══
+   Ce document voit les actions telles qu'elles étaient à l'étape
+   « Ouverture » : les modifications faites ensuite dans un Suivi ou une
+   Fermeture n'apparaissent pas ici. Ses propres modifications sont, elles,
+   visibles dans les Suivis, la Fermeture et le tableau du projet. */
+const ACT_CTX = NeosActions.docContext(DOC_ID, 'ouverture');
+const ACT_SOURCE = DOC_LABEL || 'Ouverture de chantier';
+NeosActions.migrateLinkedIds(DOC_ID);
+function getProjectActions(){ return NeosActions.list(PROJECT_ID, ACT_CTX); }
+function isOwnLinked(row){ return !!row.linkedKey && row.sourceDocId===DOC_ID; }
 
 /* ═══ RAPPORT NUM ═══ */
 function buildRapNum(){
@@ -460,40 +424,22 @@ function buildContent(){
     <div class="section-card-body" style="color:var(--muted);font-size:.83rem">
       Appuyez sur <strong style="color:var(--accent)">📷 Photo</strong> pour ouvrir l'appareil photo,
       ou <strong style="color:var(--accent2)">🖼 Galerie</strong> pour choisir depuis vos fichiers.
-      Chaque catégorie accepte plusieurs photos.
+      Chaque catégorie accepte plusieurs photos. <strong style="color:var(--danger)">🗑</strong> supprime une photo.
     </div>`;
   p5.appendChild(introCard);
 
+  loadPhotos();
   PHOTO_SECTIONS.forEach(sec=>{
     const secCard=document.createElement('div');
     secCard.className='section-card';
     secCard.innerHTML=`<div class="section-card-header"><h3>📸 ${sec.title}</h3></div>`;
     const grid=document.createElement('div');
-    grid.className='photo-section-grid';
-    sec.labels.forEach(label=>{
-      const cid=catId(label);
-      const catCard=document.createElement('div');
-      catCard.className='photo-cat-card';
-      catCard.id='pcat-'+cid;
-      catCard.innerHTML=`
-        <div class="photo-cat-header">
-          <span class="photo-cat-title">${label}</span>
-          <span class="photo-cat-count" id="pcnt-${cid}">0</span>
-        </div>
-        <div class="photo-thumbs" id="pthumbs-${cid}"></div>
-        <div class="photo-cat-actions">
-          <input type="file" accept="image/*" capture="environment" class="photo-file-hidden" id="pcam-${cid}" multiple onchange="handlePhotos('${label}',this)">
-          <input type="file" accept="image/*" class="photo-file-hidden" id="pgal-${cid}" multiple onchange="handlePhotos('${label}',this)">
-          <button class="btn-photo-cam" onclick="document.getElementById('pcam-${cid}').click()">📷 Photo</button>
-          <button class="btn-photo-gal" onclick="document.getElementById('pgal-${cid}').click()">🖼 Galerie</button>
-        </div>`;
-      grid.appendChild(catCard);
-    });
+    grid.className='np-grid';
+    sec.labels.forEach(label=>grid.appendChild(photoCard(label)));
     secCard.appendChild(grid);
     p5.appendChild(secCard);
   });
   content.appendChild(p5);
-  restorePhotos();
 }
 
 /* ═══ HELPERS ═══ */
@@ -606,14 +552,14 @@ function renderActions(){
     return;
   }
   actionRows.forEach(row=>{
-    const isPI=!!row.linkedKey;
+    const isPI=isOwnLinked(row);
     const tr=document.createElement('tr');
     tr.style.background=isPI?'rgba(220,38,38,.04)':'';
     tr.innerHTML=`
       <td><input value="${esc(row.qui)}" placeholder="Responsable" ${isPI?'style="border-color:rgba(220,38,38,.3)"':''} oninput="updateSharedAction('${row.id}','qui',this.value)"></td>
       <td><input type="date" value="${__dateToISO(row.date)}" ${isPI?'style="border-color:rgba(220,38,38,.3)"':''} onchange="updateSharedAction('${row.id}','date',__dateFromISO(this.value))"></td>
       <td>
-        ${isPI?`<span style="font-size:.7rem;color:var(--danger);font-family:'DM Mono',monospace;margin-right:6px;vertical-align:middle">⚠ ${esc(row.linkedLabel)}</span>`:''}
+        ${row.linkedKey?`<span style="font-size:.7rem;color:var(--danger);font-family:'DM Mono',monospace;margin-right:6px;vertical-align:middle">⚠ ${esc(row.linkedLabel)}</span>`:''}
         <input value="${esc(row.action)}" placeholder="Description de l'action..." ${isPI?'style="border-color:rgba(220,38,38,.3)"':''} oninput="updateSharedAction('${row.id}','action',this.value)">
       </td>
       <td>
@@ -629,15 +575,27 @@ function renderActions(){
   });
 }
 function updateSharedAction(id,field,val){
-  upsertProjectAction({id,[field]:val});
+  NeosActions.update(PROJECT_ID, ACT_CTX, id, {[field]:val});
+  // Action liée à une réserve de CE document : on garde le panneau
+  // « Points importants » synchronisé avec le tableau.
+  const row=actionRows.find(r=>r.id===id);
+  if(row && isOwnLinked(row) && field!=='statut'){
+    const m=row.linkedKey.match(/^pi_(.+)_(\d+)$/);
+    if(m){
+      const list=gj('pi_actions_'+m[1],[]);
+      const idx=parseInt(m[2]);
+      if(list[idx]){ list[idx][field]=val; sj('pi_actions_'+m[1],list); renderPIActions(row.linkedLabel); }
+    }
+  }
   actionRows=getProjectActions();
 }
 function addActionRow(){
-  upsertProjectAction({id:newActionId(),qui:'',date:'',action:'',statut:'À faire'});
+  if(!PROJECT_ID){ showToast('⚠ Ouvrez ce rapport depuis un projet pour gérer les actions'); return; }
+  NeosActions.create(PROJECT_ID, ACT_CTX, {}, {sourceLabel:ACT_SOURCE});
   refreshActions();
 }
 function deleteManualAction(id){
-  deleteProjectActionById(id);
+  NeosActions.remove(PROJECT_ID, ACT_CTX, id);
   refreshActions();
 }
 
@@ -744,80 +702,46 @@ function updatePIAction(label,idx,field,val){
   refreshActions();
 }
 
-// Pousse les actions liées aux Points importants (réserves) dans le tableau
-// partagé du projet, avec un identifiant stable par point + index — jamais
-// dupliqué, toujours mis à jour en place.
+// Pousse les actions liées aux Points importants (réserves) dans les
+// actions du projet, avec un identifiant propre à ce document + point +
+// index. Seuls les champs réellement modifiés sont enregistrés, et le
+// statut n'est jamais écrasé.
 function syncPIToActions(){
+  if(!PROJECT_ID) return;
+  const current=getProjectActions();
   PI_POINTS.forEach(label=>{
     const pid=piId(label);
     const isReserve=g('pi_state_'+pid)==='reserve';
     const linkedPrefix='pi_'+pid+'_';
-    const existingLinked=getProjectActions().filter(a=>a.linkedKey&&a.linkedKey.startsWith(linkedPrefix));
-    if(!isReserve){
-      existingLinked.forEach(a=>deleteProjectActionById(a.id));
-      return;
-    }
-    const piActions=gj('pi_actions_'+pid,[]);
+    const piActions=isReserve?gj('pi_actions_'+pid,[]):[];
     piActions.forEach((a,idx)=>{
-      upsertProjectAction({
-        id: linkedPrefix+idx,
-        qui: a.qui||'', date: a.date||'', action: a.action||'',
-        linkedKey: linkedPrefix+idx, linkedLabel: label,
-        sourceDocId: DOC_ID, sourceLabel: DOC_LABEL||'Ouverture de chantier'
-      });
+      NeosActions.upsert(PROJECT_ID, ACT_CTX, NeosActions.linkedId(DOC_ID, linkedPrefix+idx),
+        { qui:a.qui||'', date:a.date||'', action:a.action||'' },
+        { linkedKey:linkedPrefix+idx, linkedLabel:label, sourceLabel:ACT_SOURCE });
     });
-    // retire les entrées devenues obsolètes (actions PI supprimées)
-    existingLinked.forEach(a=>{
+    // retire les entrées devenues obsolètes (réserve levée / action PI supprimée)
+    current.filter(a=>isOwnLinked(a) && a.linkedKey.startsWith(linkedPrefix)).forEach(a=>{
       const idx=parseInt(a.linkedKey.slice(linkedPrefix.length));
-      if(idx>=piActions.length) deleteProjectActionById(a.id);
+      if(idx>=piActions.length) NeosActions.remove(PROJECT_ID, ACT_CTX, a.id);
     });
   });
 }
 
-/* ═══ PHOTOS ═══ */
-function handlePhotos(label,input){
-  const files=Array.from(input.files);
-  if(!files.length)return;
-  if(!photoData[label])photoData[label]=[];
-  let loaded=0;
-  files.forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      photoData[label].push(e.target.result);
-      loaded++;
-      if(loaded===files.length){savePhotos();renderPhotoThumbs(label);showToast(`✔ ${files.length} photo(s) — ${label}`);}
-    };
-    reader.readAsDataURL(file);
+/* ═══ PHOTOS (bloc commun : photos.js) ═══ */
+function photoCard(label){
+  return NeosPhotos.card({
+    title: label,
+    get: ()=>photoData[label]||[],
+    set: list=>{ photoData[label]=list; return savePhotos(); }
   });
-  input.value='';
 }
-function renderPhotoThumbs(label){
-  const cid=catId(label);
-  const container=document.getElementById('pthumbs-'+cid);
-  const countEl=document.getElementById('pcnt-'+cid);
-  const cardEl=document.getElementById('pcat-'+cid);
-  if(!container)return;
-  const photos=photoData[label]||[];
-  container.innerHTML=photos.map((dataUrl,i)=>`
-    <div class="photo-thumb-wrap">
-      <img src="${dataUrl}" alt="">
-      <button class="photo-thumb-del" onclick="deletePhoto('${label}',${i})">✕</button>
-    </div>`).join('');
-  if(countEl){countEl.textContent=photos.length;countEl.classList.toggle('show',photos.length>0)}
-  if(cardEl)cardEl.classList.toggle('has-photo',photos.length>0);
+function savePhotos(){
+  try{ localStorage.setItem(PFX+'photos', JSON.stringify(photoData)); return true; }
+  catch(e){ return false; }
 }
-function deletePhoto(label,idx){
-  if(!photoData[label])return;
-  photoData[label].splice(idx,1);
-  savePhotos();renderPhotoThumbs(label);
-}
-function savePhotos(){sj('photos',photoData)}
-function restorePhotos(){
-  const saved=gj('photos',{});
-  Object.assign(photoData,saved);
-  PHOTO_SECTIONS.forEach(sec=>sec.labels.forEach(label=>{
-    if(photoData[label]?.length)renderPhotoThumbs(label);
-  }));
+function loadPhotos(){
+  Object.keys(photoData).forEach(k=>delete photoData[k]);
+  Object.assign(photoData, gj('photos',{}));
 }
 
 /* ═══ EXPORT PDF ═══ */
@@ -970,7 +894,7 @@ async function exportPDF(){
           checkBreak(8);
           doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(16,77,94);
           doc.text(`${sec.title} — ${label}`, marginX, y); y+=5;
-          for(const dataUrl of photos){
+          for(const dataUrl of photos.map(NeosPhotos.src)){
             const dims = await __loadImageDims(dataUrl);
             let imgW=contentW, imgH=70;
             if(dims.w && dims.h){

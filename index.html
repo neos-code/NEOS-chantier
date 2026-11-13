@@ -177,6 +177,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 <div class="toast" id="toast"></div>
 
+<script src="actions.js"></script>
 <script>
 /* ═══ DOC TYPES CONFIG ═══ */
 const DOC_TYPES = [
@@ -299,6 +300,7 @@ function renderProjectActionsTable(pid){
     <div class="doc-type-section" style="margin-bottom:20px">
       <div class="doc-type-header">
         <h3>📋 Suivi des actions</h3>
+        <span style="font-size:.72rem;color:var(--muted)">Vue globale — dernière modification</span>
       </div>
       ${actions.length ? `
       <div style="overflow-x:auto">
@@ -436,7 +438,7 @@ function doDeleteProject(){
     Object.keys(localStorage).filter(k=>k.startsWith('doc_'+d.id+'_')).forEach(k=>localStorage.removeItem(k));
   });
   saveDocuments(getDocuments().filter(d=>d.projectId!==id));
-  saveProjectActions(JSON.parse(localStorage.getItem('neos_project_actions')||'[]').filter(a=>a.projectId!==id));
+  NeosActions.purgeProject(id);
   closeModal('modal-confirm');
   showToast('✔ Projet supprimé');
   showProjectList();
@@ -472,20 +474,15 @@ function createDocument(){
 }
 
 /* ═══ TABLEAU D'ACTIONS PROJET ═══
-   Source unique partagée avec tous les documents (ouverture, fermeture,
-   suivi) : ils lisent et écrivent directement ici, aucune copie n'est
-   faite lors de la création d'un nouveau document. */
+   Vue globale : affiche l'état le plus récent de chaque action, quel que
+   soit le document qui l'a modifiée (voir actions.js pour la règle de
+   propagation entre documents). Une modification faite ici n'est pas
+   reportée dans les documents déjà existants. */
 function getProjectActions(projectId){
-  try{ return JSON.parse(localStorage.getItem('neos_project_actions')||'[]').filter(a=>a.projectId===projectId); }
-  catch(e){ return []; }
-}
-function saveProjectActions(all){
-  localStorage.setItem('neos_project_actions', JSON.stringify(all));
+  return NeosActions.list(projectId, NeosActions.DASHBOARD);
 }
 function updateProjectActionStatus(projectId, actionId, statut){
-  const all = JSON.parse(localStorage.getItem('neos_project_actions')||'[]');
-  const item = all.find(a=>a.id===actionId);
-  if(item){ item.statut = statut; saveProjectActions(all); }
+  NeosActions.update(projectId, NeosActions.DASHBOARD, actionId, { statut });
 }
 
 function openDocument(docId){
@@ -533,13 +530,12 @@ let pendingDeleteActionId = null, pendingDeleteActionProjectId = null;
 function askDeleteProjectAction(projectId, actionId){
   pendingDeleteActionProjectId = projectId;
   pendingDeleteActionId = actionId;
-  document.getElementById('confirm-text').textContent = 'Supprimer cette action du suivi ?';
+  document.getElementById('confirm-text').textContent = 'Supprimer cette action du suivi ? (les documents déjà créés la conservent)';
   document.getElementById('confirm-btn').onclick = doDeleteProjectAction;
   openModal('modal-confirm');
 }
 function doDeleteProjectAction(){
-  const all = JSON.parse(localStorage.getItem('neos_project_actions')||'[]');
-  saveProjectActions(all.filter(a=>a.id!==pendingDeleteActionId));
+  NeosActions.remove(pendingDeleteActionProjectId, NeosActions.DASHBOARD, pendingDeleteActionId);
   closeModal('modal-confirm');
   showToast('✔ Action supprimée du suivi');
   render();

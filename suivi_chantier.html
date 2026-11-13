@@ -8,6 +8,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="theme-color" content="#ffffff">
 <title>Suivi de Chantier</title>
+<link rel="stylesheet" href="photos.css">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 input[type="date"]{color-scheme:light}
@@ -90,22 +91,6 @@ select.field-input option{background:var(--card)}
 .status-bloque{background:rgba(220,38,38,.15);color:var(--danger)}
 .status-attente{background:rgba(16,77,94,.12);color:var(--accent)}
 
-/* ═══ PHOTOS ═══ */
-.photos-wrap{margin-top:10px}
-.photos-label{font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
-.photos-row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
-.photo-thumb{position:relative;width:72px;height:72px;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
-.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.photo-thumb-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
-.photo-thumb:hover .photo-thumb-del{opacity:1}
-.photo-add-btns{display:flex;flex-direction:column;gap:5px}
-.btn-photo-cam,.btn-photo-gal{padding:5px 10px;border-radius:6px;font-size:.73rem;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;transition:all .12s;white-space:nowrap}
-.btn-photo-cam{background:var(--accent);color:#fff;border:none;font-weight:600}
-.btn-photo-cam:hover{opacity:.85}
-.btn-photo-gal{background:transparent;border:1px solid var(--border);color:var(--text)}
-.btn-photo-gal:hover{border-color:var(--accent2);color:var(--accent2)}
-.photo-file-hidden{display:none}
-
 /* ═══ EMPTY STATE ═══ */
 .empty-state{text-align:center;padding:48px 24px;color:var(--muted)}
 .empty-state .es-icon{font-size:2.5rem;margin-bottom:12px;opacity:.4}
@@ -149,7 +134,7 @@ select.field-input option{background:var(--card)}
 @media print{
   @page{margin:12mm;size:A4}
   body{background:#fff!important;color:#111!important}
-  .topbar,.tabs,.btn-add,.btn-del-card,.photo-add-btns,.btn-reset,.btn-export,.photo-thumb-del{display:none!important}
+  .topbar,.tabs,.btn-add,.btn-del-card,.btn-reset,.btn-export{display:none!important}
   .tab-page{display:block!important}
   .print-header{display:block!important}
   .card,.action-card{background:#fff!important;border:1px solid #ccc!important;page-break-inside:avoid}
@@ -162,7 +147,6 @@ select.field-input option{background:var(--card)}
   .rapnum-display{background:#fafafa!important;border:1px solid #e0a800!important;color:#8a6200!important}
   .status-select{border:1px solid #ccc!important}
   .action-card-top{background:#fafafa}
-  .photo-thumb{border:1px solid #ddd!important}
 }
 .print-header,.__print-value{display:none}
 </style>
@@ -254,6 +238,8 @@ select.field-input option{background:var(--card)}
 <div class="toast" id="toast"></div>
 
 <script src="jspdf.umd.min.js"></script>
+<script src="actions.js"></script>
+<script src="photos.js"></script>
 <script>
 const __params = new URLSearchParams(location.search);
 const DOC_ID = __params.get('doc') || 'standalone';
@@ -286,37 +272,23 @@ function __dateFromISO(iso){
 function sj(k,v){try{localStorage.setItem(PFX+k,JSON.stringify(v))}catch(e){}}
 function gj(k,def){try{const v=localStorage.getItem(PFX+k);return v?JSON.parse(v):def}catch(e){return def}}
 
-/* ═══ TABLEAU D'ACTIONS PARTAGÉ (source unique pour tout le projet) ═══
-   Les champs qui/date/action/statut vivent dans neos_project_actions et
-   sont donc partagés avec les autres documents du projet. Les photos,
-   elles, restent propres à CE document (spécifiques à cette visite). */
-function getAllProjectActionsRaw(){
-  try{ return JSON.parse(localStorage.getItem('neos_project_actions')||'[]'); }catch(e){ return []; }
-}
-function saveAllProjectActionsRaw(all){
-  try{ localStorage.setItem('neos_project_actions', JSON.stringify(all)); }catch(e){}
-}
-function getProjectActions(){
-  if(!PROJECT_ID) return [];
-  return getAllProjectActionsRaw().filter(a=>a.projectId===PROJECT_ID);
-}
-function upsertProjectAction(patch){
-  const all=getAllProjectActionsRaw();
-  const idx=all.findIndex(a=>a.id===patch.id);
-  if(idx>=0){ all[idx]={...all[idx],...patch,updatedAt:Date.now()}; }
-  else{ all.push({ projectId:PROJECT_ID, statut:'À faire', sourceDocId:DOC_ID, sourceLabel:DOC_LABEL||'Suivi de chantier', createdAt:Date.now(), updatedAt:Date.now(), ...patch }); }
-  saveAllProjectActionsRaw(all);
-}
-function deleteProjectActionById(id){
-  saveAllProjectActionsRaw(getAllProjectActionsRaw().filter(a=>a.id!==id));
-}
-function newActionId(){ return 'act_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+/* ═══ ACTIONS DU PROJET (voir actions.js) ═══
+   Le Suivi voit les actions avec les modifications de l'Ouverture et des
+   Suivis plus anciens. Ses propres modifications apparaissent dans les
+   Suivis suivants, la Fermeture et le tableau du projet, mais pas dans
+   l'Ouverture. Les photos restent propres à CE document. */
+const ACT_CTX = NeosActions.docContext(DOC_ID, 'suivi');
+const ACT_SOURCE = DOC_LABEL || 'Suivi de chantier';
+function getProjectActions(){ return NeosActions.list(PROJECT_ID, ACT_CTX); }
 
 const STATUT_TO_SHARED = { attente:'À faire', encours:'En cours', bloque:'Bloqué', fait:'Fait' };
 const STATUT_FROM_SHARED = { 'À faire':'attente', 'En cours':'encours', 'Bloqué':'bloque', 'Fait':'fait' };
 
 function getLocalPhotos(actionId){ return gj('action_photos_'+actionId, []); }
-function saveLocalPhotos(actionId, photos){ sj('action_photos_'+actionId, photos); }
+function saveLocalPhotos(actionId, photos){
+  try{ localStorage.setItem(PFX+'action_photos_'+actionId, JSON.stringify(photos)); return true; }
+  catch(e){ return false; }
+}
 
 let actions=[]; // cache de rendu, reconstruit depuis neos_project_actions
 
@@ -354,17 +326,17 @@ function loadActions(){
   const shared = getProjectActions().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   actions = shared.map(a=>({
     id: a.id,
+    linkedLabel: a.linkedKey ? (a.linkedLabel||'') : '',
     date: a.date||'',
     qui: a.qui||'',
     quoi: a.action||'',
-    statut: STATUT_FROM_SHARED[a.statut] || 'attente',
-    photos: getLocalPhotos(a.id)
+    statut: STATUT_FROM_SHARED[a.statut] || 'attente'
   }));
 }
 
 function addAction(){
-  const id=newActionId();
-  upsertProjectAction({id, qui:'', date:'', action:'', statut:'À faire'});
+  if(!PROJECT_ID){ showToast('⚠ Ouvrez ce suivi depuis un projet pour gérer les actions'); return; }
+  NeosActions.create(PROJECT_ID, ACT_CTX, {}, {sourceLabel:ACT_SOURCE});
   loadActions();
   renderActions();
   showToast('✔ Nouvelle action ajoutée');
@@ -377,7 +349,7 @@ function addAction(){
 }
 
 function delAction(id){
-  deleteProjectActionById(id);
+  NeosActions.remove(PROJECT_ID, ACT_CTX, id);
   localStorage.removeItem(PFX+'action_photos_'+id);
   loadActions();
   renderActions();
@@ -387,14 +359,12 @@ function updateAction(id,field,val){
   const a=actions.find(a=>a.id===id);
   if(!a)return;
   a[field]=val;
-  if(field==='photos'){
-    saveLocalPhotos(id,val);
-  } else if(field==='quoi'){
-    upsertProjectAction({id, action:val});
+  if(field==='quoi'){
+    NeosActions.update(PROJECT_ID, ACT_CTX, id, {action:val});
   } else if(field==='statut'){
-    upsertProjectAction({id, statut: STATUT_TO_SHARED[val]||'À faire'});
+    NeosActions.update(PROJECT_ID, ACT_CTX, id, {statut: STATUT_TO_SHARED[val]||'À faire'});
   } else {
-    upsertProjectAction({id, [field]:val});
+    NeosActions.update(PROJECT_ID, ACT_CTX, id, {[field]:val});
   }
   if(field==='statut') renderStatutSelect(id,val);
   updateActionsCount();
@@ -435,7 +405,7 @@ function renderActions(){
         </div>
         <div class="quoi-col">
           <div class="ac-label" style="display:flex;align-items:center;justify-content:space-between">
-            <span>Action</span>
+            <span>Action${a.linkedLabel?` <span style="color:var(--danger);text-transform:none;letter-spacing:0">⚠ Réserve ${esc(a.linkedLabel)}</span>`:''}</span>
             <select class="status-select status-${a.statut}" id="sel-${a.id}" onchange="updateAction('${a.id}','statut',this.value)">
               <option value="encours" ${a.statut==='encours'?'selected':''}>En cours</option>
               <option value="fait"    ${a.statut==='fait'   ?'selected':''}>✔ Fait</option>
@@ -447,68 +417,15 @@ function renderActions(){
         </div>
         <button class="btn-del-card" onclick="delAction('${a.id}')" title="Supprimer">✕</button>
       </div>
-      <div class="action-card-body">
-        <div class="photos-label">Photos</div>
-        <div class="photos-row" id="photos-row-${a.id}">
-          ${renderThumbs(a)}
-          <div class="photo-add-btns">
-            <input type="file" accept="image/*" capture="environment" class="photo-file-hidden" id="pcam-${a.id}" multiple onchange="handlePhotos('${a.id}',this)">
-            <input type="file" accept="image/*" class="photo-file-hidden" id="pgal-${a.id}" multiple onchange="handlePhotos('${a.id}',this)">
-            <button class="btn-photo-cam" onclick="document.getElementById('pcam-${a.id}').click()">📷 Photo</button>
-            <button class="btn-photo-gal" onclick="document.getElementById('pgal-${a.id}').click()">🖼 Galerie</button>
-          </div>
-        </div>
-      </div>`;
+      <div class="action-card-body"></div>`;
+    card.querySelector('.action-card-body').appendChild(NeosPhotos.card({
+      title: 'Photos',
+      get: ()=>getLocalPhotos(a.id),
+      set: photos=>saveLocalPhotos(a.id, photos)
+    }));
     list.appendChild(card);
   });
   updateActionsCount();
-}
-
-function renderThumbs(a){
-  return (a.photos||[]).map((url,i)=>`
-    <div class="photo-thumb">
-      <img src="${url}" alt="">
-      <button class="photo-thumb-del" onclick="delPhoto('${a.id}',${i})">✕</button>
-    </div>`).join('');
-}
-
-function refreshThumbs(id){
-  const a=actions.find(a=>a.id===id);
-  if(!a)return;
-  const row=document.getElementById('photos-row-'+id);
-  if(!row)return;
-  // Rebuild thumb elements, keep the add-btns div
-  const addBtns=row.querySelector('.photo-add-btns');
-  row.innerHTML='';
-  row.insertAdjacentHTML('beforeend',renderThumbs(a));
-  if(addBtns)row.appendChild(addBtns);
-}
-
-function handlePhotos(id,input){
-  const files=Array.from(input.files);
-  if(!files.length)return;
-  const a=actions.find(a=>a.id===id);
-  if(!a)return;
-  if(!a.photos)a.photos=[];
-  let loaded=0;
-  files.forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      a.photos.push(e.target.result);
-      loaded++;
-      if(loaded===files.length){saveLocalPhotos(id,a.photos);refreshThumbs(id);showToast(`✔ ${files.length} photo(s) ajoutée(s)`);}
-    };
-    reader.readAsDataURL(file);
-  });
-  input.value='';
-}
-
-function delPhoto(id,idx){
-  const a=actions.find(a=>a.id===id);
-  if(!a||!a.photos)return;
-  a.photos.splice(idx,1);
-  saveLocalPhotos(id,a.photos);
-  refreshThumbs(id);
 }
 
 /* ═══════════════════════════════════════════
@@ -609,7 +526,7 @@ async function exportPDF(){
       checkBreak(lines.length*4.3+2);
       doc.text(lines, marginX, y); y+=lines.length*4.3+3;
 
-      for(const dataUrl of (a.photos||[])){
+      for(const dataUrl of getLocalPhotos(a.id).map(NeosPhotos.src)){
         const dims = await __loadImageDims(dataUrl);
         let imgW=90, imgH=60;
         if(dims.w && dims.h){
