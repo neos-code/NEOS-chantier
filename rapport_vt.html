@@ -548,6 +548,7 @@ const SECTIONS = [
       { id:"place_tgbt",     label:"Place dispo dans TGBT",      type:"yesno" },
       { id:"rangees_libres", label:"Nb rangées libres",          type:"text" },
       { id:"phases",         label:"Mono/triphasé",              type:"select", options:["Monophasé","Triphasé"] },
+      { id:"cablette_terre", label:"Câblette de terre",          type:"yesno" },
       { id:"comment_tgbt",   label:"Commentaire TGBT",           type:"text" },
       { type:"photo", label:"TGBT" },
       { type:"photo", label:"Disjoncteur principal" },
@@ -568,10 +569,6 @@ const SECTIONS = [
       { id:"dist_gaine",     label:"Distance gaine",             type:"text" },
       { type:"photo", label:"Passage DC" },
       { type:"photo", label:"Passage AC" },
-    ]},
-    { title:"Schémas & Terre", fields:[
-      { id:"photos_regard",  label:"Photos mise à la terre",     type:"yesno" },
-      { id:"etat_regard",    label:"Etat de la mise à la terre",  type:"select", options:["Neuf","Très bon","Bon","Mauvais"] },
     ]},
     { title:"Groupe électrogène", fields:[
       { id:"groupe_elec",    label:"Groupe électrogène",         type:"yesno" },

@@ -1,0 +1,30 @@
+/* ═══════════════════════════════════════════════════════════════
+   NEOS Chantier — Participants & signatures (participants.js)
+   Ouverture et Fermeture de chantier
+═══════════════════════════════════════════════════════════════ */
+.pt-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.pt-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px}
+.pt-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.pt-head span{font-size:.75rem;color:var(--muted);font-weight:600}
+.pt-remove{background:transparent;border:1px solid var(--border);color:var(--danger);border-radius:6px;font-size:.72rem;padding:3px 8px;cursor:pointer}
+.pt-remove:hover{background:rgba(220,38,38,.08);border-color:var(--danger)}
+.pt-card textarea{width:100%;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;resize:none;outline:none;min-height:56px;line-height:1.5;padding:6px 9px}
+.pt-card textarea:focus{border-color:var(--accent)}
+.pt-sig-label{font-size:.72rem;color:var(--muted);margin:10px 0 4px;display:flex;align-items:center;justify-content:space-between}
+.pt-sig-clear{background:transparent;border:none;color:var(--accent2);font-size:.72rem;cursor:pointer;text-decoration:underline;padding:0}
+.pt-sig-wrap{background:#fff;border:1px dashed var(--accent2);border-radius:8px;overflow:hidden;touch-action:none}
+.pt-sig-wrap canvas{width:100%;height:120px;display:block;cursor:crosshair;touch-action:none}
+.pt-add{margin-top:12px;padding:10px 16px;background:transparent;border:1px dashed var(--accent2);border-radius:8px;color:var(--accent);font-size:.85rem;font-weight:600;cursor:pointer;width:100%;font-family:'DM Sans',sans-serif}
+.pt-add:hover{background:rgba(117,176,182,.08)}
+
+/* Mobile : une carte par ligne, toute la largeur, grande zone de signature */
+@media(max-width:600px){
+  .pt-list{grid-template-columns:1fr;gap:14px}
+  .pt-card{padding:12px 10px}
+  .pt-sig-wrap canvas{height:200px}
+  .pt-mobile-wide .section-card-body{padding:10px 8px}
+}
+@media print{
+  .pt-add,.pt-remove,.pt-sig-clear{display:none!important}
+  .pt-card{background:#fafafa!important;border:1px solid #ccc!important}
+}

@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#ffffff">
 <title>Rapport Ouverture Chantier</title>
 <link rel="stylesheet" href="photos.css">
+<link rel="stylesheet" href="participants.css">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 input[type="date"]{color-scheme:light}
@@ -73,14 +74,6 @@ select.field-input{cursor:pointer}
 select.field-input option{background:var(--card)}
 .rapnum-display{background:var(--bg);border:1px solid var(--accent);border-radius:7px;color:var(--accent);font-family:'DM Mono',monospace;font-size:.88rem;font-weight:500;padding:7px 11px;letter-spacing:.5px;user-select:all}
 
-.participants-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-.participant-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px}
-.participant-card label{font-size:.72rem;color:var(--muted);display:block;margin-bottom:4px;font-weight:500}
-.participant-card textarea{width:100%;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;resize:none;outline:none;min-height:60px;line-height:1.5}
-.sig-label{font-size:.68rem;color:var(--muted);margin:6px 0 3px;display:flex;align-items:center;justify-content:space-between}
-.sig-clear{background:transparent;border:none;color:var(--accent2);font-size:.68rem;cursor:pointer;text-decoration:underline;padding:0}
-.sig-canvas-wrap{background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;touch-action:none}
-.sig-canvas{width:100%;height:70px;display:block;cursor:crosshair}
 
 .actions-table{width:100%;border-collapse:collapse}
 .actions-table th{text-align:left;font-size:.78rem;color:var(--muted);font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px}
@@ -141,8 +134,7 @@ select.field-input option{background:var(--card)}
 @media(max-width:900px){
   .content{padding:20px}
   .field-row{grid-template-columns:160px 1fr}
-  .participants-grid{grid-template-columns:repeat(2,1fr)}
-}
+  }
 @media(max-width:600px){
   .topbar{padding:0 12px;height:52px}
   .topbar-title{font-size:.88rem}
@@ -158,8 +150,7 @@ select.field-input option{background:var(--card)}
   .content{padding:14px}
   .field-row{grid-template-columns:1fr;gap:4px;padding:10px 0}
   .field-label{padding-top:0}
-  .participants-grid{grid-template-columns:1fr 1fr}
-}
+  }
 
 @media print {
   @page{margin:15mm;size:A4}
@@ -176,9 +167,7 @@ select.field-input option{background:var(--card)}
   .__print-hide{display:none!important}
   .__print-value{display:block!important;background:#fafafa!important;border:1px solid #ccc!important;border-radius:7px;color:#111!important;font-family:'DM Mono',monospace;font-size:.82rem;padding:7px 11px;white-space:pre-wrap;word-break:break-word}
   .rapnum-display{background:#fafafa!important;border:1px solid #104d5e!important;color:#c07a00!important}
-  .participant-card{background:#fafafa!important;border:1px solid #ccc!important}
-  .participant-card textarea{color:#111!important}
-  .actions-table input{background:#fafafa!important;border:1px solid #ccc!important;color:#111!important}
+      .actions-table input{background:#fafafa!important;border:1px solid #ccc!important;color:#111!important}
   .pi-ras.active{background:#e6faf3!important;border-color:#2a9e6a!important;color:#1a6a47!important}
   .pi-reserve.active{background:#fef0f0!important;border-color:#d04040!important;color:#a03030!important}
   .pi-ras:not(.active),.pi-reserve:not(.active){opacity:.3!important}
@@ -223,6 +212,7 @@ select.field-input option{background:var(--card)}
 <script src="jspdf.umd.min.js"></script>
 <script src="actions.js"></script>
 <script src="photos.js"></script>
+<script src="participants.js"></script>
 <script>
 const PAGES = [
   { id:'entete',       icon:'📋', title:'Général' },
@@ -316,7 +306,6 @@ function switchPage(idx){
   });
   currentPage=idx; updateProgress();
   if(PAGES[idx].id==='actions') refreshActions();
-  if(PAGES[idx].id==='participants') setTimeout(resizeAllSignaturePads, 0);
 }
 
 /* ═══ PROGRESS ═══ */
@@ -365,10 +354,10 @@ function buildContent(){
   /* PAGE 2 — PARTICIPANTS */
   const p2=mkPage('participants');
   const partCard=document.createElement('div');
-  partCard.className='section-card';
+  partCard.className = 'section-card pt-mobile-wide';
   partCard.innerHTML=`
     <div class="section-card-header"><h3>👥 Participants présents</h3></div>
-    <div class="section-card-body"><div class="participants-grid" id="part-grid"></div></div>`;
+    <div class="section-card-body"><div id="part-grid"></div></div>`;
   p2.appendChild(partCard);
   content.appendChild(p2);
   buildParticipants();
@@ -460,79 +449,8 @@ function catId(label){return label.replace(/[^a-zA-Z0-9]/g,'_')}
 /* ═══ PARTICIPANTS ═══ */
 function buildParticipants(){
   const grid=document.getElementById('part-grid');
-  if(!grid)return; grid.innerHTML='';
-  for(let i=1;i<=5;i++){
-    const d=document.createElement('div');
-    d.className='participant-card';
-    d.innerHTML=`<label>Participant ${i}</label><textarea placeholder="Société&#10;Nom Prénom" oninput="s('participant_${i}',this.value)">${esc(g('participant_'+i,i===1?'NEOS\nKhalil NEFFATI':''))}</textarea>
-      <div class="sig-label"><span>Signature</span><button class="sig-clear" onclick="clearSignature(${i})">Effacer</button></div>
-      <div class="sig-canvas-wrap"><canvas class="sig-canvas" id="sig-${i}"></canvas></div>`;
-    grid.appendChild(d);
-  }
-  setTimeout(()=>{ for(let i=1;i<=5;i++) initSignaturePad(i); }, 0);
-}
-
-/* ═══ SIGNATURE PAD ═══ */
-const __sigState = {};
-function initSignaturePad(i){
-  const canvas = document.getElementById('sig-'+i);
-  if(!canvas) return;
-  const ctx = canvas.getContext('2d');
-  __sigState[i] = { drawing:false, ctx, canvas, sized:false };
-
-  const getPos = (e) => {
-    const r = canvas.getBoundingClientRect();
-    const point = e.touches ? e.touches[0] : e;
-    return { x: point.clientX - r.left, y: point.clientY - r.top };
-  };
-  const start = (e) => { e.preventDefault(); resizeSignaturePad(i); const st=__sigState[i]; st.drawing=true; const p=getPos(e); st.ctx.beginPath(); st.ctx.moveTo(p.x,p.y); };
-  const move = (e) => { const st=__sigState[i]; if(!st.drawing) return; e.preventDefault(); const p=getPos(e); st.ctx.lineTo(p.x,p.y); st.ctx.stroke(); };
-  const end = () => { const st=__sigState[i]; if(!st.drawing) return; st.drawing=false; s('signature_'+i, canvas.toDataURL('image/png')); };
-
-  canvas.addEventListener('mousedown', start);
-  canvas.addEventListener('mousemove', move);
-  window.addEventListener('mouseup', end);
-  canvas.addEventListener('touchstart', start, {passive:false});
-  canvas.addEventListener('touchmove', move, {passive:false});
-  canvas.addEventListener('touchend', end);
-}
-
-// Le canvas doit être redimensionné une fois que sa page est réellement
-// visible (display:block) — avant ça, getBoundingClientRect() renvoie 0,
-// ce qui rendait la zone de signature inutilisable.
-function resizeSignaturePad(i){
-  const st = __sigState[i];
-  if(!st) return;
-  const canvas = st.canvas;
-  const rect = canvas.getBoundingClientRect();
-  if(rect.width < 5) return; // page encore cachée, on réessaiera plus tard
-  const ratio = window.devicePixelRatio || 1;
-  const targetW = Math.round(rect.width * ratio);
-  const targetH = Math.round(rect.height * ratio);
-  if(st.sized && canvas.width === targetW && canvas.height === targetH) return;
-
-  const saved = g('signature_'+i);
-  canvas.width = targetW;
-  canvas.height = targetH;
-  st.ctx.scale(ratio, ratio);
-  st.ctx.lineWidth = 2;
-  st.ctx.lineCap = 'round';
-  st.ctx.strokeStyle = '#111';
-  st.sized = true;
-  if(saved){
-    const img = new Image();
-    img.onload = () => st.ctx.drawImage(img, 0, 0, rect.width, rect.height);
-    img.src = saved;
-  }
-}
-function resizeAllSignaturePads(){
-  for(let i=1;i<=5;i++) resizeSignaturePad(i);
-}
-function clearSignature(i){
-  const st = __sigState[i];
-  if(!st) return;
-  st.ctx.clearRect(0,0,st.canvas.width,st.canvas.height);
-  s('signature_'+i, '');
+  if(!grid) return;
+  NeosParticipants.mount(grid, { get:g, set:s });
 }
 
 /* ═══ ACTIONS ═══ */
@@ -826,9 +744,7 @@ async function exportPDF(){
     addField('Type de projet', g('type_projet'));
 
     sectionTitle('Participants présents');
-    for(let i=1;i<=5;i++){
-      const p=g('participant_'+i, i===1?'NEOS\nKhalil NEFFATI':'');
-      const sig=g('signature_'+i);
+    for(const {n:i, text:p, sig} of NeosParticipants.entries(g)){
       if(!(p && p.trim()) && !sig) continue;
       addField('Participant '+i, p.replace(/\n/g,' — '));
       if(sig){
